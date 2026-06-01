@@ -52,6 +52,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone = models.CharField(
         max_length=20,
         unique=True,
+        null=True,
+        blank=True,
         verbose_name='Номер телефона',
         help_text='В международном формате, например: +79991234567'
     )
@@ -68,6 +70,35 @@ class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(
         blank=True,
         verbose_name='Email'
+    )
+
+    # Социальная авторизация
+    phone_verified = models.BooleanField(
+        default=False,
+        verbose_name='Телефон подтверждён',
+        help_text='Подтверждён ли телефон через flash call или SMS'
+    )
+    vk_id = models.CharField(
+        max_length=50,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='VK ID',
+        help_text='ID пользователя в VK (для входа через VK ID)'
+    )
+    apple_id = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='Apple ID',
+        help_text='ID пользователя в Apple (sub-токен из Apple Sign In)'
+    )
+    social_avatar_url = models.URLField(
+        max_length=500,
+        blank=True,
+        verbose_name='Аватар из соцсети',
+        help_text='URL аватара пользователя из соцсети (заполняется при первом входе)'
     )
 
     is_active = models.BooleanField(

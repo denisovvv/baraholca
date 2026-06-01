@@ -11,14 +11,15 @@ class UserAdmin(BaseUserAdmin):
     Админка для кастомной модели User с авторизацией по телефону.
     """
 
-    list_display = ('phone', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
-    list_filter = ('is_staff', 'is_superuser', 'is_active')
+    list_display = ('phone', 'phone_verified', 'first_name', 'last_name', 'is_staff', 'is_active', 'date_joined')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'phone_verified')
     search_fields = ('phone', 'first_name', 'last_name', 'email')
     ordering = ('-date_joined',)
 
     fieldsets = (
-        (None, {'fields': ('phone', 'password')}),
-        (_('Личные данные'), {'fields': ('first_name', 'last_name', 'email')}),
+        (None, {'fields': ('phone', 'phone_verified', 'password')}),
+        (_('Личные данные'), {'fields': ('first_name', 'last_name', 'email', 'social_avatar_url')}),
+        (_('Соцсети'), {'fields': ('vk_id', 'apple_id'), 'classes': ('collapse',)}),
         (_('Права'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
