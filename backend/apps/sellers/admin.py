@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from apps.sellers.models import Seller
+from apps.sellers.models import Seller, SellerStaff
 
 
 @admin.register(Seller)
@@ -22,6 +22,25 @@ class SellerAdmin(admin.ModelAdmin):
         }),
         ('Системное', {
             'fields': ('uuid_1c', 'created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+
+
+@admin.register(SellerStaff)
+class SellerStaffAdmin(admin.ModelAdmin):
+    list_display = ('user', 'seller', 'role', 'is_active', 'created_at')
+    list_filter = ('role', 'is_active', 'seller')
+    search_fields = ('user__phone', 'user__first_name', 'user__last_name', 'seller__name')
+    readonly_fields = ('created_at',)
+    autocomplete_fields = ('user', 'seller')
+
+    fieldsets = (
+        (None, {
+            'fields': ('user', 'seller', 'role', 'is_active')
+        }),
+        ('Системное', {
+            'fields': ('created_at',),
             'classes': ('collapse',)
         }),
     )

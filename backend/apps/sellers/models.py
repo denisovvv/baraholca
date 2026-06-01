@@ -85,3 +85,60 @@ class Seller(models.Model):
 
     def __str__(self):
         return self.short_name or self.name
+
+
+class SellerStaff(models.Model):
+    """
+    Связь пользователя с продавцом и его ролью в команде продавца.
+    Один пользователь может работать у нескольких продавцов с разными ролями.
+    """
+
+    ROLE_ADMIN = 'admin'
+    ROLE_MANAGER = 'manager'
+    ROLE_STOREKEEPER = 'storekeeper'
+
+    ROLE_CHOICES = [
+        (ROLE_ADMIN, 'Администратор'),
+        (ROLE_MANAGER, 'Менеджер заказов'),
+        (ROLE_STOREKEEPER, 'Кладовщик'),
+    ]
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='seller_roles',
+        verbose_name='Пользователь'
+    )
+    seller = models.ForeignKey(
+        Seller,
+        on_delete=models.CASCADE,
+        related_name='staff',
+        verbose_name='Продавец'
+    )
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICES,
+        verbose_name='Роль'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активен'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Создан'
+    )
+
+    class Meta:
+        verbose_name = 'Сотрудник продавца'
+        verbose_name_plural = 'Сотрудники продавцов'
+        ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['user', 'seller'],
+                name='unique_user_seller_role'
+            )
+        ]
+
+    def __str__(self):
+        return f'{self.user} → {self.seller} ({self.get_role_display()})'
