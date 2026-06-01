@@ -4,12 +4,14 @@
 
 ## Содержание
 
+## Содержание
+
 - [1c-integration.md](./1c-integration.md) — Архитектура интеграции с 1С
+- [data-model.md](./data-model.md) — Модели данных
 
 ## Документы в работе
 
 - `architecture.md` — Общая архитектура проекта
-- `data-model.md` — Модели данных (User, Seller, Product, Order и т.д.)
 - `api.md` — Структура REST API
 - `auth.md` — Аутентификация пользователей (SMS/flash call/JWT)
 - `scenarios.md` — Сценарии работы (оформление заказа, синхронизация и т.д.)
