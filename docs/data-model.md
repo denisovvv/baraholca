@@ -294,9 +294,8 @@ UUID склада приходит из 1С. Координаты и зона д
 | `seller` | ForeignKey → Seller, CASCADE | Продавец, которому принадлежит склад |
 | `name` | CharField(150) | Название склада (например, «Склад на Ленина, 5») |
 | `address` | CharField(500) | Адрес склада |
-| `latitude` | DecimalField(10, 7) | Широта центра склада |
-| `longitude` | DecimalField(10, 7) | Долгота центра склада |
-| `delivery_area` | PolygonField (PostGIS) | Полигон зоны доставки |
+| `location` | PointField (PostGIS), SRID 4326 | Координаты центра склада (широта/долгота как одна точка) |
+| `delivery_area` | PolygonField (PostGIS), SRID 4326, null | Полигон зоны доставки (необязателен — можно нарисовать позже) |
 | `pickup_available` | BooleanField, default=True | Доступен ли самовывоз с этого склада |
 | `working_hours` | JSONField, blank | Режим работы по дням недели |
 | `contact_phone` | CharField(20), blank | Телефон склада (для покупателей при самовывозе) |
@@ -306,7 +305,12 @@ UUID склада приходит из 1С. Координаты и зона д
 
 **Особенности:**
 
-- `delivery_area` требует расширения PostGIS в PostgreSQL (включается флагом при создании managed PostgreSQL на Yandex Cloud)
+- Поля `location` и `delivery_area` требуют расширения PostGIS в PostgreSQL
+- На локальной разработке: установлен PostgreSQL 17 + PostGIS 3.6 через Homebrew
+- На Yandex Cloud: PostGIS включается флагом при создании managed PostgreSQL
+- Используется SRID 4326 (WGS 84) — мировой стандарт географических координат (как у GPS, Google Maps, Яндекс.Карт)
+- В админке для редактирования полей используется встроенная `django.contrib.gis.admin.GISModelAdmin` с картой OpenStreetMap
+- Карта в админке центрируется на регионе Воронежская/Белгородская область
 - В админке зона доставки рисуется на карте через JavaScript-библиотеку (Leaflet.draw или аналог)
 - При оформлении заказа адрес клиента проверяется на попадание в `delivery_area` каждого склада
 
@@ -843,7 +847,7 @@ User ─┬─< Cart (1:1) ──< CartItem (n) ─── Product
       │               ├─< OrderStatusHistory (n)
       │               └── Warehouse
       ├─< Review (n) ──── Product (или Seller)
-      ├─< SellerStaff (n) ─── Seller
+      ├─< SellerаStaff (n) ─── Seller
       └─< SocialAuthLog (n)
 Seller ─┬─< Product (n) ─┬─< ProductImage (n)
 │                ├─< ProductStock (n) ─── Warehouse
@@ -881,3 +885,4 @@ Category ─< Category (self, parent)
 | Дата | Что изменено |
 |---|---|
 | Июнь 2026 | Первая редакция, синхронизирована с архитектурой интеграции 1С |
+| Июнь 2026 | Уточнена модель Warehouse: PointField вместо отдельных latitude/longitude, добавлен SRID 4326 |
