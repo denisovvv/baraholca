@@ -1,3 +1,4 @@
+from django.contrib.gis.db import models as gis_models
 from django.db import models
 from django.utils.text import slugify
 
@@ -87,4 +88,95 @@ class Category(models.Model):
         if self.parent:
             return self.parent.get_level() + 1
         return 0
+    
+class Warehouse(models.Model):
+    """
+    Склад / точка продавца.
+
+    UUID склада приходит из 1С. Координаты центра и полигон зоны доставки
+    ведутся в админке приложения.
+    """
+
+    uuid_1c = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='UUID в 1С',
+        help_text='Идентификатор склада в системе 1С'
+    )
+    seller = models.ForeignKey(
+        'sellers.Seller',
+        on_delete=models.CASCADE,
+        related_name='warehouses',
+        verbose_name='Продавец'
+    )
+    name = models.CharField(
+        max_length=150,
+        verbose_name='Название',
+        help_text='Например: «Склад на Ленина, 5»'
+    )
+    address = models.CharField(
+        max_length=500,
+        verbose_name='Адрес'
+    )
+
+    # Геоданные — центр склада (для отображения на карте)
+    location = gis_models.PointField(
+        verbose_name='Координаты центра',
+        help_text='Точка на карте, где расположен склад',
+        srid=4326
+    )
+
+    # Геоданные — зона доставки (полигон)
+    delivery_area = gis_models.PolygonField(
+        null=True,
+        blank=True,
+        verbose_name='Зона доставки',
+        help_text='Полигон территории, на которую этот склад доставляет курьером',
+        srid=4326
+    )
+
+    pickup_available = models.BooleanField(
+        default=True,
+        verbose_name='Доступен самовывоз',
+        help_text='Может ли покупатель забрать заказ с этого склада'
+    )
+
+    working_hours = models.JSONField(
+        blank=True,
+        null=True,
+        verbose_name='Часы работы',
+        help_text='Часы работы по дням недели в формате JSON'
+    )
+
+    contact_phone = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='Контактный телефон',
+        help_text='Телефон склада для покупателей при самовывозе'
+    )
+
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активен'
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Создан'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Обновлён'
+    )
+
+    class Meta:
+        verbose_name = 'Склад'
+        verbose_name_plural = 'Склады'
+        ordering = ['seller__name', 'name']
+
+    def __str__(self):
+        return f'{self.name} ({self.seller.short_name or self.seller.name})'
+    
+
     
