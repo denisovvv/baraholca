@@ -209,5 +209,171 @@ class Warehouse(models.Model):
     def __str__(self):
         return f'{self.name} ({self.seller.short_name or self.seller.name})'
     
+class Product(models.Model):
+    """
+    Товар. Главная модель каталога.
 
+    Основные данные приходят из 1С: название, базовая цена, остатки.
+    В админке управляются: фото, скидки, флаг доступности на нашей стороне.
+    """
+
+    # Типы товаров
+    TYPE_STOCK = 'stock'
+    TYPE_MADE_TO_ORDER = 'made_to_order'
+
+    TYPE_CHOICES = [
+        (TYPE_STOCK, 'Со склада'),
+        (TYPE_MADE_TO_ORDER, 'Под заказ (3D-печать)'),
+    ]
+
+    # Идентификатор из 1С
+    uuid_1c = models.UUIDField(
+        unique=True,
+        null=True,
+        blank=True,
+        verbose_name='UUID в 1С',
+        help_text='Идентификатор товара в системе 1С (заполняется автоматически)'
+    )
+
+    # Названия
+    name_short = models.CharField(
+        max_length=255,
+        verbose_name='Название краткое',
+        help_text='Для списков, каталога'
+    )
+    name_full = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Название полное',
+        help_text='Для карточки товара'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='Описание'
+    )
+
+    # Связи
+    seller = models.ForeignKey(
+        'sellers.Seller',
+        on_delete=models.PROTECT,
+        related_name='products',
+        verbose_name='Продавец'
+    )
+    category = models.ForeignKey(
+        Category,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='products',
+        verbose_name='Категория'
+    )
+
+    # Тип товара
+    product_type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default=TYPE_STOCK,
+        verbose_name='Тип товара'
+    )
+
+    # Цены
+    base_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        verbose_name='Базовая цена',
+        help_text='Цена из 1С (рубли)'
+    )
+    discount_price = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name='Скидочная цена',
+        help_text='Если задана — используется вместо базовой цены'
+    )
+
+    # Флаги
+    is_available_for_sale = models.BooleanField(
+        default=True,
+        verbose_name='Доступен к продаже (1С)',
+        help_text='Управляется из 1С: глобальный флаг доступности товара'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активен в системе',
+        help_text='Управляется в админке: можно скрыть товар, не меняя данные в 1С'
+    )
+
+    # Для товаров под заказ
+    production_time_days = models.IntegerField(
+        null=True,
+        blank=True,
+        verbose_name='Время изготовления (дней)',
+        help_text='Только для товаров под заказ'
+    )
+
+    # Метаданные
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Создан'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Обновлён'
+    )
+    synced_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Последняя синхронизация с 1С'
+    )
+
+    class Meta:
+        verbose_name = 'Товар'
+        verbose_name_plural = 'Товары'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['seller', 'is_active']),
+            models.Index(fields=['category', 'is_active']),
+            models.Index(fields=['is_available_for_sale', 'is_active']),
+        ]
+
+    def __str__(self):
+        return self.name_short
+
+    def get_effective_price(self):
+        """
+        Возвращает актуальную цену для покупателя.
+        Если задана скидочная — её, иначе базовую.
+        """
+        if self.discount_price is not None:
+            return self.discount_price
+        return self.base_price
+
+    def is_visible_in_catalog(self):
+        """
+        Проверяет, виден ли товар в каталоге для покупателей.
+        """
+        return (
+            self.is_active
+            and self.is_available_for_sale
+            and self.seller.is_active
+        )
+
+    def clean(self):
+        """
+        Валидация бизнес-логики:
+        - У товара «под заказ» обязательно должно быть время изготовления
+        - Скидочная цена должна быть меньше базовой (иначе нет смысла)
+        """
+        if self.product_type == self.TYPE_MADE_TO_ORDER:
+            if not self.production_time_days:
+                raise ValidationError({
+                    'production_time_days': 'Для товаров под заказ обязательно указать время изготовления'
+                })
+
+        if self.discount_price is not None and self.base_price is not None:
+            if self.discount_price >= self.base_price:
+                raise ValidationError({
+                    'discount_price': 'Скидочная цена должна быть меньше базовой'
+                })
     

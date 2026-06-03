@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 
-from apps.catalog.models import Category, Warehouse
+from apps.catalog.models import Category, Product, Warehouse
 
 
 @admin.register(Category)
@@ -80,3 +80,104 @@ class WarehouseAdmin(GISModelAdmin):
             'classes': ('collapse',)
         }),
     )
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    """
+    Админка для товаров.
+
+    Большинство данных приходит из 1С и не редактируется вручную:
+    название, базовая цена, флаг доступности, UUID.
+
+    В админке управляются: категория, тип товара, скидочная цена,
+    флаг is_active, время изготовления (для made_to_order).
+    """
+
+    list_display = (
+        'name_short',
+        'seller',
+        'category',
+        'product_type',
+        'get_effective_price_display',
+        'is_available_for_sale',
+        'is_active',
+        'created_at',
+    )
+    list_filter = (
+        'seller',
+        'category',
+        'product_type',
+        'is_available_for_sale',
+        'is_active',
+    )
+    search_fields = (
+        'name_short',
+        'name_full',
+        'description',
+        'uuid_1c',
+    )
+    list_editable = ('is_active',)
+    autocomplete_fields = ('seller', 'category')
+    readonly_fields = (
+        'uuid_1c',
+        'created_at',
+        'updated_at',
+        'synced_at',
+        'get_effective_price_display',
+    )
+
+    fieldsets = (
+        ('Основное', {
+            'fields': (
+                'seller',
+                'category',
+                'name_short',
+                'name_full',
+                'description',
+            )
+        }),
+        ('Тип и наличие', {
+            'fields': (
+                'product_type',
+                'production_time_days',
+                'is_available_for_sale',
+                'is_active',
+            )
+        }),
+        ('Цены', {
+            'fields': (
+                'base_price',
+                'discount_price',
+                'get_effective_price_display',
+            )
+        }),
+        ('Системное', {
+            'fields': (
+                'uuid_1c',
+                'created_at',
+                'updated_at',
+                'synced_at',
+            ),
+            'classes': ('collapse',),
+        }),
+    )
+
+    def get_effective_price_display(self, obj):
+        """
+        Отображение актуальной цены в списке и в форме.
+        """
+        if obj.pk is None:
+            return '—'
+        price = obj.get_effective_price()
+        if obj.discount_price is not None:
+            return f'{price} ₽ (со скидкой)'
+        return f'{price} ₽'
+
+    get_effective_price_display.short_description = 'Актуальная цена'
+
+    def save_model(self, request, obj, form, change):
+        """
+        Перед сохранением вызываем full_clean(), чтобы сработала валидация модели.
+        """
+        obj.full_clean()
+        super().save_model(request, obj, form, change)
