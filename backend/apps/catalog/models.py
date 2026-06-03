@@ -376,4 +376,56 @@ class Product(models.Model):
                 raise ValidationError({
                     'discount_price': 'Скидочная цена должна быть меньше базовой'
                 })
+class ProductImage(models.Model):
+    """
+    Фотография товара.
+    У товара может быть несколько фото. У одного из них должен быть флаг is_main=True.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='images',
+        verbose_name='Товар'
+    )
+    image = models.ImageField(
+        upload_to='products/',
+        verbose_name='Изображение'
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name='Порядок сортировки',
+        help_text='Чем меньше число, тем раньше в галерее'
+    )
+    is_main = models.BooleanField(
+        default=False,
+        verbose_name='Главное фото',
+        help_text='Используется в каталоге как обложка товара'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Создано'
+    )
+
+    class Meta:
+        verbose_name = 'Фотография товара'
+        verbose_name_plural = 'Фотографии товаров'
+        ordering = ['-is_main', 'order', 'created_at']
+
+    def __str__(self):
+        return f'Фото {self.product.name_short} ({"главное" if self.is_main else "доп."})'
+
+    def save(self, *args, **kwargs):
+        """
+        Если это фото отмечается как главное — сбрасываем флаг у всех остальных фото товара.
+        Это гарантирует, что у одного товара только одно главное фото.
+        """
+        if self.is_main:
+            # Снимаем флаг у всех других фото этого товара
+            ProductImage.objects.filter(
+                product=self.product,
+                is_main=True
+            ).exclude(pk=self.pk).update(is_main=False)
+        super().save(*args, **kwargs)    
+
     

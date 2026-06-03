@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 
-from apps.catalog.models import Category, Product, Warehouse
+from apps.catalog.models import Category, Product, ProductImage, Warehouse
 
 
 @admin.register(Category)
@@ -81,6 +81,14 @@ class WarehouseAdmin(GISModelAdmin):
         }),
     )
 
+class ProductImageInline(admin.TabularInline):
+    """
+    Инлайн для отображения фотографий товара прямо на странице товара.
+    """
+    model = ProductImage
+    extra = 1
+    fields = ('image', 'is_main', 'order')
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """
@@ -92,6 +100,8 @@ class ProductAdmin(admin.ModelAdmin):
     В админке управляются: категория, тип товара, скидочная цена,
     флаг is_active, время изготовления (для made_to_order).
     """
+
+    inlines = [ProductImageInline]
 
     list_display = (
         'name_short',
