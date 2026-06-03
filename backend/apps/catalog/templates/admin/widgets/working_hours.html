@@ -1,0 +1,52 @@
+<div class="working-hours-widget" style="margin: 10px 0;">
+    <table style="border-collapse: collapse; width: 100%; max-width: 500px;">
+        <thead>
+            <tr style="background: #2b2b2b; color: white;">
+                <th style="padding: 8px; text-align: left; border: 1px solid #444;">День</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #444;">Работает</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #444;">С</th>
+                <th style="padding: 8px; text-align: center; border: 1px solid #444;">До</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day in widget.days %}
+            <tr>
+                <td style="padding: 8px; border: 1px solid #444;">{{ day.label }}</td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                    <input
+                        type="checkbox"
+                        name="{{ widget.field_name }}_{{ day.key }}_open_flag"
+                        {% if day.is_open %}checked{% endif %}
+                        onchange="toggleDayInputs('{{ widget.field_name }}_{{ day.key }}', this.checked)"
+                    >
+                </td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                    <input
+                        type="time"
+                        name="{{ widget.field_name }}_{{ day.key }}_open_time"
+                        id="{{ widget.field_name }}_{{ day.key }}_open_time"
+                        value="{{ day.open_time }}"
+                        {% if not day.is_open %}disabled{% endif %}
+                    >
+                </td>
+                <td style="padding: 8px; text-align: center; border: 1px solid #444;">
+                    <input
+                        type="time"
+                        name="{{ widget.field_name }}_{{ day.key }}_close_time"
+                        id="{{ widget.field_name }}_{{ day.key }}_close_time"
+                        value="{{ day.close_time }}"
+                        {% if not day.is_open %}disabled{% endif %}
+                    >
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+function toggleDayInputs(prefix, isOpen) {
+    document.getElementById(prefix + '_open_time').disabled = !isOpen;
+    document.getElementById(prefix + '_close_time').disabled = !isOpen;
+}
+</script>

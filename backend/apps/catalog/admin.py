@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 
 from apps.catalog.models import Category, Product, ProductImage, ProductStock, Warehouse
-
+from apps.catalog.forms import WorkingHoursFormField
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -51,6 +51,15 @@ class WarehouseAdmin(GISModelAdmin):
     Используется встроенная GISModelAdmin Django с картой OpenStreetMap.
     """
 # Начальный вид карты — центр между Воронежем и Белгородом
+
+    def formfield_for_dbfield(self, db_field, request, **kwargs):
+        """
+        Подменяем стандартное JSON-поле working_hours на наш кастомный виджет.
+        """
+        if db_field.name == 'working_hours':
+            return WorkingHoursFormField(label=db_field.verbose_name, required=False)
+        return super().formfield_for_dbfield(db_field, request, **kwargs)
+
     gis_widget_kwargs = {
         'attrs': {
             'default_lat': 51.1,
