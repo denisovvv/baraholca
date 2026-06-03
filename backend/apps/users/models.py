@@ -94,13 +94,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name='Apple ID',
         help_text='ID пользователя в Apple (sub-токен из Apple Sign In)'
     )
-    social_avatar_url = models.URLField(
-        max_length=500,
-        blank=True,
-        verbose_name='Аватар из соцсети',
-        help_text='URL аватара пользователя из соцсети (заполняется при первом входе)'
-    )
-
+    
     is_active = models.BooleanField(
         default=True,
         verbose_name='Активен'

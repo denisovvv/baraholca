@@ -18,7 +18,7 @@ class UserAdmin(BaseUserAdmin):
 
     fieldsets = (
         (None, {'fields': ('phone', 'phone_verified', 'password')}),
-        (_('Личные данные'), {'fields': ('first_name', 'last_name', 'email', 'social_avatar_url')}),
+        (_('Личные данные'), {'fields': ('first_name', 'last_name', 'email')}),
         (_('Соцсети'), {'fields': ('vk_id', 'apple_id'), 'classes': ('collapse',)}),
         (_('Права'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
