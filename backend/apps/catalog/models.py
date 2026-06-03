@@ -358,6 +358,18 @@ class Product(models.Model):
             and self.is_available_for_sale
             and self.seller.is_active
         )
+    
+    def has_stock(self):
+        """
+        Проверяет, есть ли товар в наличии хотя бы на одном складе.
+        Для товаров «под заказ» всегда True (они не имеют остатков).
+        """
+        if self.product_type == self.TYPE_MADE_TO_ORDER:
+            return True
+
+        return self.stocks.filter(
+            quantity__gt=models.F('reserved_quantity')
+        ).exists()
 
     def clean(self):
         """
@@ -426,6 +438,88 @@ class ProductImage(models.Model):
                 product=self.product,
                 is_main=True
             ).exclude(pk=self.pk).update(is_main=False)
-        super().save(*args, **kwargs)    
+        super().save(*args, **kwargs)   
+
+
+class ProductStock(models.Model):
+    """
+    Остаток товара на конкретном складе.
+
+    Связующая модель Product + Warehouse + количество.
+    Данные приходят из 1С при синхронизации.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stocks',
+        verbose_name='Товар'
+    )
+    warehouse = models.ForeignKey(
+        Warehouse,
+        on_delete=models.CASCADE,
+        related_name='stocks',
+        verbose_name='Склад'
+    )
+    quantity = models.IntegerField(
+        default=0,
+        verbose_name='Количество',
+        help_text='Остаток к продаже (за вычетом брака, приходит из 1С)'
+    )
+    reserved_quantity = models.IntegerField(
+        default=0,
+        verbose_name='В резервах',
+        help_text='Количество в активных заказах (ещё не отгружено)'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Обновлён'
+    )
+
+    class Meta:
+        verbose_name = 'Остаток на складе'
+        verbose_name_plural = 'Остатки на складах'
+        ordering = ['product', 'warehouse']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['product', 'warehouse'],
+                name='unique_product_warehouse_stock'
+            )
+        ]
+        indexes = [
+            models.Index(fields=['warehouse']),
+            models.Index(fields=['product', 'warehouse']),
+        ]
+
+    def __str__(self):
+        return f'{self.product.name_short} → {self.warehouse.name}: {self.quantity} шт.'
+
+    @property
+    def available_quantity(self):
+        """
+        Доступное к покупке количество.
+        Это quantity минус то, что уже в активных резервах.
+        """
+        return max(0, self.quantity - self.reserved_quantity)
+
+    def clean(self):
+        """
+        Валидация:
+        - quantity не может быть отрицательным
+        - reserved_quantity не может превышать quantity
+        - reserved_quantity не может быть отрицательным
+        """
+        if self.quantity < 0:
+            raise ValidationError({
+                'quantity': 'Количество не может быть отрицательным'
+            })
+        if self.reserved_quantity < 0:
+            raise ValidationError({
+                'reserved_quantity': 'Резерв не может быть отрицательным'
+            })
+        if self.reserved_quantity > self.quantity:
+            raise ValidationError({
+                'reserved_quantity': f'Резерв ({self.reserved_quantity}) не может превышать остаток ({self.quantity})'
+            }) 
 
     

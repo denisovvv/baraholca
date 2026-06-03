@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.gis.admin import GISModelAdmin
 
-from apps.catalog.models import Category, Product, ProductImage, Warehouse
+from apps.catalog.models import Category, Product, ProductImage, ProductStock, Warehouse
 
 
 @admin.register(Category)
@@ -89,6 +89,24 @@ class ProductImageInline(admin.TabularInline):
     extra = 1
     fields = ('image', 'is_main', 'order')
 
+class ProductStockInline(admin.TabularInline):
+    """
+    Инлайн для отображения остатков товара на складах прямо на странице товара.
+    Показывает quantity, reserved_quantity и available_quantity.
+    """
+    model = ProductStock
+    extra = 0
+    fields = ('warehouse', 'quantity', 'reserved_quantity', 'available_quantity_display', 'updated_at')
+    readonly_fields = ('available_quantity_display', 'updated_at')
+    autocomplete_fields = ('warehouse',)
+
+    def available_quantity_display(self, obj):
+        if obj.pk is None:
+            return '—'
+        return f'{obj.available_quantity} шт.'
+
+    available_quantity_display.short_description = 'Доступно'
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """
@@ -101,7 +119,7 @@ class ProductAdmin(admin.ModelAdmin):
     флаг is_active, время изготовления (для made_to_order).
     """
 
-    inlines = [ProductImageInline]
+    inlines = [ProductImageInline, ProductStockInline]
 
     list_display = (
         'name_short',
@@ -188,6 +206,33 @@ class ProductAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         """
         Перед сохранением вызываем full_clean(), чтобы сработала валидация модели.
+        """
+        obj.full_clean()
+        super().save_model(request, obj, form, change)
+
+
+@admin.register(ProductStock)
+class ProductStockAdmin(admin.ModelAdmin):
+    """
+    Админка для остатков на складах.
+    Основной просмотр — на странице товара (инлайн).
+    Этот раздел — для общего обзора и фильтрации остатков по складам.
+    """
+
+    list_display = ('product', 'warehouse', 'quantity', 'reserved_quantity', 'available_quantity_display', 'updated_at')
+    list_filter = ('warehouse', 'product__seller', 'product__category')
+    search_fields = ('product__name_short', 'product__uuid_1c', 'warehouse__name')
+    autocomplete_fields = ('product', 'warehouse')
+    readonly_fields = ('updated_at',)
+
+    def available_quantity_display(self, obj):
+        return f'{obj.available_quantity} шт.'
+
+    available_quantity_display.short_description = 'Доступно'
+
+    def save_model(self, request, obj, form, change):
+        """
+        Валидация на сохранение (проверка отрицательных значений и т.д.).
         """
         obj.full_clean()
         super().save_model(request, obj, form, change)
