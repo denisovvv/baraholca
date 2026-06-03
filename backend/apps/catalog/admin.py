@@ -35,7 +35,16 @@ class CategoryAdmin(admin.ModelAdmin):
     get_full_path.short_description = 'Категория'
     get_full_path.admin_order_field = 'name'
 
+    def save_model(self, request, obj, form, change):
+        """
+        Перед сохранением вызываем full_clean(), чтобы сработала валидация модели.
+        """
+        obj.full_clean()
+        super().save_model(request, obj, form, change)
+
 @admin.register(Warehouse)
+
+
 class WarehouseAdmin(GISModelAdmin):
     """
     Админка для склада с поддержкой гео-полей.

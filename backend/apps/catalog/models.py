@@ -1,6 +1,7 @@
 from django.contrib.gis.db import models as gis_models
 from django.db import models
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
 
 
 class Category(models.Model):
@@ -88,6 +89,36 @@ class Category(models.Model):
         if self.parent:
             return self.parent.get_level() + 1
         return 0
+    
+    def clean(self):
+        """
+        Валидация на уровне модели:
+        - Запрещаем глубину вложенности больше 3 уровней
+        - Запрещаем категории быть собственным родителем (циклы)
+        """
+        # Проверка циклов — категория не может быть родителем самой себе
+        if self.parent and self.parent == self:
+            raise ValidationError({
+                'parent': 'Категория не может быть родителем самой себе'
+            })
+
+        # Проверка глубины — максимум 3 уровня (0, 1, 2)
+        if self.parent:
+            # get_level() считает от 0 — если у родителя level=2, то у нас будет level=3, что уже слишком
+            if self.parent.get_level() >= 2:
+                raise ValidationError({
+                    'parent': 'Превышена максимальная глубина вложенности (3 уровня)'
+                })
+
+        # Проверка цикла через родителей — не допускаем, чтобы категория была своим прапредком
+        if self.parent and self.pk:
+            parent = self.parent
+            while parent:
+                if parent.pk == self.pk:
+                    raise ValidationError({
+                        'parent': 'Обнаружен цикл — категория не может быть потомком самой себя'
+                    })
+                parent = parent.parent
     
 class Warehouse(models.Model):
     """
