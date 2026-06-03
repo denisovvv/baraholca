@@ -1,8 +1,13 @@
-from django.contrib import admin
-from django.contrib.gis.admin import GISModelAdmin
+from decimal import Decimal
 
+from django.contrib import admin, messages
+from django.contrib.gis.admin import GISModelAdmin
+from django.http import HttpResponseRedirect
+from django.shortcuts import render
+from django.urls import reverse
+
+from apps.catalog.forms import ApplyDiscountForm, WorkingHoursFormField
 from apps.catalog.models import Category, Product, ProductImage, ProductStock, Warehouse
-from apps.catalog.forms import WorkingHoursFormField
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
@@ -218,6 +223,87 @@ class ProductAdmin(admin.ModelAdmin):
         """
         obj.full_clean()
         super().save_model(request, obj, form, change)
+    actions = ['apply_discount_action']
+
+    def apply_discount_action(self, request, queryset):
+        """
+        Admin action для массового применения скидки к выбранным товарам.
+        """
+        # Получаем ID выбранных товаров
+        selected_ids = list(queryset.values_list('id', flat=True))
+
+        # Если пользователь только что отправил форму — применяем скидку
+        if 'apply' in request.POST:
+            form = ApplyDiscountForm(request.POST)
+            if form.is_valid():
+                discount_type = form.cleaned_data['discount_type']
+                percent_value = form.cleaned_data.get('percent_value')
+                fixed_value = form.cleaned_data.get('fixed_value')
+
+                applied_count = 0
+                skipped_count = 0
+
+                for product in queryset:
+                    base_price = product.base_price
+
+                    # Считаем новую цену
+                    if discount_type == ApplyDiscountForm.DISCOUNT_TYPE_PERCENT:
+                        discount_amount = base_price * percent_value / Decimal('100')
+                        new_price = base_price - discount_amount
+                    else:
+                        new_price = base_price - fixed_value
+
+                    # Округляем до копеек
+                    new_price = new_price.quantize(Decimal('0.01'))
+
+                    # Валидация: цена не должна быть отрицательной или равной базовой
+                    if new_price <= 0:
+                        skipped_count += 1
+                        continue
+                    if new_price >= base_price:
+                        skipped_count += 1
+                        continue
+
+                    product.discount_price = new_price
+                    product.save()
+                    applied_count += 1
+
+                if applied_count:
+                    self.message_user(
+                        request,
+                        f'Скидка применена к {applied_count} товарам.',
+                        messages.SUCCESS,
+                    )
+                if skipped_count:
+                    self.message_user(
+                        request,
+                        f'Пропущено {skipped_count} товаров (скидка слишком большая или цена не уменьшается).',
+                        messages.WARNING,
+                    )
+
+                return HttpResponseRedirect(request.get_full_path())
+        else:
+            form = ApplyDiscountForm()
+
+        # Готовим предпросмотр для формы
+        preview = []
+        for product in queryset[:5]:  # показываем первые 5 для предпросмотра
+            preview.append({
+                'name': product.name_short,
+                'base_price': product.base_price,
+                'current_discount': product.discount_price,
+            })
+
+        context = {
+            'title': 'Применить скидку к товарам',
+            'products_count': queryset.count(),
+            'preview': preview,
+            'form': form,
+            'selected_ids': selected_ids,
+        }
+        return render(request, 'admin/catalog/apply_discount.html', context)
+
+    apply_discount_action.short_description = 'Применить скидку к выбранным товарам'
 
 
 @admin.register(ProductStock)

@@ -112,3 +112,65 @@ class WorkingHoursFormField(forms.CharField):
             return json.loads(value)
         except (ValueError, TypeError):
             return None
+        
+class ApplyDiscountForm(forms.Form):
+    """
+    Форма для применения массовой скидки к выбранным товарам.
+    Можно задать либо процент, либо фиксированную сумму в рублях.
+    """
+
+    DISCOUNT_TYPE_PERCENT = 'percent'
+    DISCOUNT_TYPE_FIXED = 'fixed'
+
+    DISCOUNT_TYPE_CHOICES = [
+        (DISCOUNT_TYPE_PERCENT, 'В процентах от базовой цены'),
+        (DISCOUNT_TYPE_FIXED, 'Фиксированная сумма скидки в рублях'),
+    ]
+
+    discount_type = forms.ChoiceField(
+        choices=DISCOUNT_TYPE_CHOICES,
+        widget=forms.RadioSelect,
+        label='Тип скидки',
+        initial=DISCOUNT_TYPE_PERCENT,
+    )
+
+    percent_value = forms.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        min_value=0.01,
+        max_value=99.99,
+        required=False,
+        label='Размер скидки в процентах',
+        help_text='Например: 10 = скидка 10% от базовой цены',
+    )
+
+    fixed_value = forms.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        min_value=0.01,
+        required=False,
+        label='Размер скидки в рублях',
+        help_text='Например: 100 = скидка 100 рублей от базовой цены',
+    )
+
+    def clean(self):
+        """
+        Проверка: должно быть заполнено одно из полей в зависимости от типа.
+        """
+        cleaned_data = super().clean()
+        discount_type = cleaned_data.get('discount_type')
+        percent_value = cleaned_data.get('percent_value')
+        fixed_value = cleaned_data.get('fixed_value')
+
+        if discount_type == self.DISCOUNT_TYPE_PERCENT:
+            if not percent_value:
+                raise forms.ValidationError({
+                    'percent_value': 'Укажите размер скидки в процентах'
+                })
+        elif discount_type == self.DISCOUNT_TYPE_FIXED:
+            if not fixed_value:
+                raise forms.ValidationError({
+                    'fixed_value': 'Укажите размер скидки в рублях'
+                })
+
+        return cleaned_data
