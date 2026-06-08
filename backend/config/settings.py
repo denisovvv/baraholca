@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.sellers',
     'apps.catalog',
+    'apps.notifications',
 ]
 
 AUTH_USER_MODEL = 'users.User'
@@ -194,3 +195,12 @@ CACHES = {
         'KEY_PREFIX': 'baraxolka',
     }
 }
+
+# ============================================================================
+# SMS notifications
+# ============================================================================
+
+# Тип SMS-провайдера для отправки кодов подтверждения.
+# Допустимые значения: 'console' (для разработки).
+# В будущем: 'sms_aero', 'zvonok' (когда заказчик выберет провайдера).
+SMS_PROVIDER = 'console'
