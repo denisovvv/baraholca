@@ -1,13 +1,14 @@
 """
 URL маршруты для API каталога (v1).
-Пока заглушка — будет наполняться в Фазе 5.
 """
 
 from django.urls import path
+
+from apps.catalog.api.v1 import views
 
 
 app_name = 'catalog_api_v1'
 
 urlpatterns = [
-    # Пока пусто — endpoints каталога будут добавлены в Фазе 5
+    path('categories/', views.CategoryListView.as_view(), name='category-list'),
 ]
