@@ -159,3 +159,37 @@ def get_client_ip(request) -> str:
         # Берём первый — это реальный клиент
         return forwarded_for.split(',')[0].strip()
     return request.META.get('REMOTE_ADDR', '0.0.0.0')
+
+# Максимум попыток ввода кода
+SMS_MAX_ATTEMPTS = 5
+
+
+def _attempts_key(phone: str) -> str:
+    """Ключ Redis для счётчика попыток ввода кода."""
+    return f'sms_attempts:{phone}'
+
+
+def get_attempts(phone: str) -> int:
+    """Возвращает количество неудачных попыток ввода кода."""
+    return cache.get(_attempts_key(phone), 0)
+
+
+def increment_attempts(phone: str) -> int:
+    """
+    Увеличивает счётчик попыток ввода кода.
+
+    TTL ключа попыток равен TTL кода — они живут синхронно.
+
+    Returns:
+        Новое количество попыток.
+    """
+    key = _attempts_key(phone)
+    if cache.get(key) is None:
+        cache.set(key, 1, timeout=SMS_CODE_TTL)
+        return 1
+    return cache.incr(key)
+
+
+def reset_attempts(phone: str) -> None:
+    """Сбрасывает счётчик попыток (после успешного входа или блокировки)."""
+    cache.delete(_attempts_key(phone))

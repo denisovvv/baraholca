@@ -12,4 +12,5 @@ app_name = 'users_api_v1'
 urlpatterns = [
     path('ping/', views.ping, name='ping'),
     path('sms/request/', views.SmsRequestView.as_view(), name='sms-request'),
+    path('sms/verify/', views.SmsVerifyView.as_view(), name='sms-verify'),
 ]

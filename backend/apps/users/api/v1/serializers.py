@@ -100,3 +100,41 @@ class PhoneRequestSerializer(serializers.Serializer):
 
         # Возвращаем в формате +7XXXXXXXXXX
         return '+' + digits
+    
+
+class SmsVerifySerializer(serializers.Serializer):
+    """
+    Сериализатор для проверки SMS-кода.
+
+    Принимает номер и код. Номер нормализуется так же,
+    как в PhoneRequestSerializer.
+    """
+
+    phone = serializers.CharField(max_length=20)
+    code = serializers.CharField(max_length=4, min_length=4)
+
+    def validate_phone(self, value: str) -> str:
+        """Нормализует номер телефона (та же логика, что в запросе кода)."""
+        digits = re.sub(r'\D', '', value)
+
+        if digits.startswith('8') and len(digits) == 11:
+            digits = '7' + digits[1:]
+        elif digits.startswith('7') and len(digits) == 11:
+            pass
+        else:
+            raise serializers.ValidationError(
+                'Введите корректный номер телефона в формате +7XXXXXXXXXX'
+            )
+
+        if len(digits) != 11 or not digits.startswith('7'):
+            raise serializers.ValidationError(
+                'Введите корректный номер телефона в формате +7XXXXXXXXXX'
+            )
+
+        return '+' + digits
+
+    def validate_code(self, value: str) -> str:
+        """Проверяет, что код состоит только из цифр."""
+        if not value.isdigit():
+            raise serializers.ValidationError('Код должен состоять из цифр')
+        return value
