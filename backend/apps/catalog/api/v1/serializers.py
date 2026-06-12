@@ -53,6 +53,36 @@ class CategorySerializer(serializers.ModelSerializer):
         """
         return obj.get_full_path()
 
+class CategoryTreeSerializer(serializers.ModelSerializer):
+    """
+    Категория с вложенными дочерними категориями (дерево).
+
+    Поле children рекурсивно сериализует подкатегории.
+    Используется для построения меню каталога в приложении.
+    """
+
+    children = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Category
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'order',
+            'children',
+        ]
+
+    def get_children(self, obj):
+        """
+        Рекурсивно сериализует активные дочерние категории.
+
+        obj.children — обратная связь от parent (related_name).
+        Сортируем детей так же, как корневые: по order, затем по имени.
+        """
+        children = obj.children.filter(is_active=True).order_by('order', 'name')
+        return CategoryTreeSerializer(children, many=True).data
+
 
 # ============================================================================
 # Warehouse

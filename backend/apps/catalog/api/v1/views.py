@@ -12,6 +12,7 @@ from django.contrib.gis.geos import Point
 
 from apps.catalog.api.v1.serializers import (
     CategorySerializer,
+    CategoryTreeSerializer,
     ProductDetailSerializer,
     ProductListSerializer,
     WarehouseListSerializer,
@@ -199,3 +200,27 @@ class WarehouseNearbyView(generics.ListAPIView):
         ).annotate(
             distance=Distance('location', user_location),
         ).select_related('seller').order_by('distance')
+    
+class CategoryTreeView(generics.ListAPIView):
+    """
+    Дерево категорий каталога.
+
+    Возвращает только корневые категории (без родителя),
+    каждая — с вложенными дочерними категориями.
+
+    GET /api/v1/catalog/categories/tree/
+    """
+
+    serializer_class = CategoryTreeSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+    def get_queryset(self):
+        """
+        Корневые активные категории (parent is null).
+        Дочерние подтягиваются рекурсивно в сериализаторе.
+        """
+        return Category.objects.filter(
+            is_active=True,
+            parent__isnull=True,
+        ).order_by('order', 'name')

@@ -10,6 +10,7 @@ from apps.catalog.api.v1 import views
 app_name = 'catalog_api_v1'
 
 urlpatterns = [
+    path('categories/tree/', views.CategoryTreeView.as_view(), name='category-tree'),
     path('categories/', views.CategoryListView.as_view(), name='category-list'),
     path('warehouses/nearby/', views.WarehouseNearbyView.as_view(), name='warehouse-nearby'),
     path('warehouses/', views.WarehouseListView.as_view(), name='warehouse-list'),
