@@ -12,4 +12,5 @@ app_name = 'catalog_api_v1'
 urlpatterns = [
     path('categories/', views.CategoryListView.as_view(), name='category-list'),
     path('warehouses/', views.WarehouseListView.as_view(), name='warehouse-list'),
+    path('products/<int:id>/', views.ProductDetailView.as_view(), name='product-detail'),
 ]

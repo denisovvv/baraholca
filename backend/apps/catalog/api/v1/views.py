@@ -7,9 +7,10 @@ from rest_framework.permissions import AllowAny
 
 from apps.catalog.api.v1.serializers import (
     CategorySerializer,
+    ProductDetailSerializer,
     WarehouseListSerializer,
 )
-from apps.catalog.models import Category, Warehouse
+from apps.catalog.models import Category, Product, Warehouse
 
 class CategoryListView(generics.ListAPIView):
     """
@@ -54,3 +55,39 @@ class WarehouseListView(generics.ListAPIView):
         return Warehouse.objects.filter(
             is_active=True,
         ).select_related('seller').order_by('name')
+    
+class ProductDetailView(generics.RetrieveAPIView):
+    """
+    Карточка одного товара со всеми деталями.
+
+    Возвращает товар с фотографиями, остатками по складам,
+    полным описанием и временем изготовления (для товаров под заказ).
+
+    Показываются только товары, видимые в каталоге
+    (активные и доступные к продаже).
+
+    GET /api/v1/catalog/products/{id}/
+    """
+
+    serializer_class = ProductDetailSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        """
+        Только товары, видимые в каталоге.
+
+        select_related — подтягиваем продавца и категорию одним запросом.
+        prefetch_related — фото и остатки (это связи "один ко многим",
+        для них нужен prefetch, а не select_related).
+        """
+        return Product.objects.filter(
+            is_active=True,
+            is_available_for_sale=True,
+        ).select_related(
+            'seller',
+            'category',
+        ).prefetch_related(
+            'images',
+            'stocks__warehouse',
+        )
