@@ -2,15 +2,19 @@
 API views для каталога: категории, склады, товары.
 """
 
-from rest_framework import generics
+from rest_framework import filters, generics
 from rest_framework.permissions import AllowAny
+
+from django.db.models import Case, DecimalField, F, When
 
 from apps.catalog.api.v1.serializers import (
     CategorySerializer,
     ProductDetailSerializer,
+    ProductListSerializer,
     WarehouseListSerializer,
 )
 from apps.catalog.models import Category, Product, Warehouse
+from apps.catalog.api.v1.filters import ProductFilter
 
 class CategoryListView(generics.ListAPIView):
     """
@@ -90,4 +94,53 @@ class ProductDetailView(generics.RetrieveAPIView):
         ).prefetch_related(
             'images',
             'stocks__warehouse',
+        )
+    
+class ProductListView(generics.ListAPIView):
+    """
+    Список товаров с фильтрацией, поиском и пагинацией.
+
+    Параметры:
+        ?category=<id>        — фильтр по категории
+        ?seller=<id>          — фильтр по продавцу
+        ?price_min=<число>    — минимальная эффективная цена
+        ?price_max=<число>    — максимальная эффективная цена
+        ?search=<текст>       — поиск по короткому и полному названию
+        ?ordering=<поле>      — сортировка (effective_price_anno, name_short)
+        ?page=<n>             — страница (по 20 товаров)
+
+    Показываются только товары, видимые в каталоге.
+
+    GET /api/v1/catalog/products/
+    """
+
+    serializer_class = ProductListSerializer
+    permission_classes = [AllowAny]
+    filterset_class = ProductFilter
+    search_fields = ['name_short', 'name_full']
+    ordering_fields = ['effective_price_anno', 'name_short']
+    ordering = ['name_short']  # сортировка по умолчанию
+
+    def get_queryset(self):
+        """
+        Товары, видимые в каталоге, с аннотацией эффективной цены.
+
+        effective_price_anno — вычисляемое в базе поле:
+        discount_price если она задана, иначе base_price.
+        Нужно, чтобы фильтровать и сортировать по реальной цене продажи.
+        """
+        return Product.objects.filter(
+            is_active=True,
+            is_available_for_sale=True,
+        ).select_related(
+            'seller',
+            'category',
+        ).prefetch_related(
+            'images',
+        ).annotate(
+            effective_price_anno=Case(
+                When(discount_price__isnull=False, then=F('discount_price')),
+                default=F('base_price'),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            )
         )
