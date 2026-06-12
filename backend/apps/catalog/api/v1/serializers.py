@@ -112,6 +112,30 @@ class WarehouseDetailSerializer(WarehouseListSerializer):
             'working_hours',
         ]
 
+class WarehouseNearbySerializer(WarehouseListSerializer):
+    """
+    Склад с расстоянием до точки покупателя.
+
+    Используется в endpoint поиска ближайших складов.
+    Поле distance_km добавляется аннотацией в queryset (PostGIS).
+    """
+
+    distance_km = serializers.SerializerMethodField()
+
+    class Meta(WarehouseListSerializer.Meta):
+        fields = WarehouseListSerializer.Meta.fields + ['distance_km']
+
+    def get_distance_km(self, obj):
+        """
+        Расстояние до склада в километрах, округлённое до 1 знака.
+
+        obj.distance — это аннотированное PostGIS-поле (объект Distance).
+        Атрибут .km даёт значение в километрах.
+        """
+        if hasattr(obj, 'distance') and obj.distance is not None:
+            return round(obj.distance.km, 1)
+        return None
+
 # ============================================================================
 # ProductImage
 # ============================================================================
