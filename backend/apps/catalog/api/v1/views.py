@@ -24,12 +24,6 @@ from apps.catalog.api.v1.filters import ProductFilter
 class CategoryListView(generics.ListAPIView):
     """
     Список всех активных категорий каталога.
-
-    Публичный endpoint — доступен без авторизации.
-    Категории сортируются по полю order (вручную выставляется в админке),
-    затем по имени.
-
-    GET /api/v1/catalog/categories/
     """
 
     serializer_class = CategorySerializer
@@ -37,10 +31,6 @@ class CategoryListView(generics.ListAPIView):
     pagination_class = None  # категорий немного, пагинация не нужна
 
     def get_queryset(self):
-        """
-        Возвращает только активные категории.
-        Сортировка: сначала по полю order, потом по имени.
-        """
         return Category.objects.filter(
             is_active=True,
         ).order_by('order', 'name')
@@ -48,11 +38,6 @@ class CategoryListView(generics.ListAPIView):
 class WarehouseListView(generics.ListAPIView):
     """
     Список всех активных складов.
-
-    Публичный endpoint. Возвращает склады с координатами и адресами.
-    Используется для отображения точек на карте и выбора самовывоза.
-
-    GET /api/v1/catalog/warehouses/
     """
 
     serializer_class = WarehouseListSerializer
@@ -68,14 +53,6 @@ class WarehouseListView(generics.ListAPIView):
 class ProductDetailView(generics.RetrieveAPIView):
     """
     Карточка одного товара со всеми деталями.
-
-    Возвращает товар с фотографиями, остатками по складам,
-    полным описанием и временем изготовления (для товаров под заказ).
-
-    Показываются только товары, видимые в каталоге
-    (активные и доступные к продаже).
-
-    GET /api/v1/catalog/products/{id}/
     """
 
     serializer_class = ProductDetailSerializer
@@ -85,10 +62,6 @@ class ProductDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         """
         Только товары, видимые в каталоге.
-
-        select_related — подтягиваем продавца и категорию одним запросом.
-        prefetch_related — фото и остатки (это связи "один ко многим",
-        для них нужен prefetch, а не select_related).
         """
         return Product.objects.filter(
             is_active=True,
@@ -104,19 +77,6 @@ class ProductDetailView(generics.RetrieveAPIView):
 class ProductListView(generics.ListAPIView):
     """
     Список товаров с фильтрацией, поиском и пагинацией.
-
-    Параметры:
-        ?category=<id>        — фильтр по категории
-        ?seller=<id>          — фильтр по продавцу
-        ?price_min=<число>    — минимальная эффективная цена
-        ?price_max=<число>    — максимальная эффективная цена
-        ?search=<текст>       — поиск по короткому и полному названию
-        ?ordering=<поле>      — сортировка (effective_price_anno, name_short)
-        ?page=<n>             — страница (по 20 товаров)
-
-    Показываются только товары, видимые в каталоге.
-
-    GET /api/v1/catalog/products/
     """
 
     serializer_class = ProductListSerializer
@@ -129,10 +89,6 @@ class ProductListView(generics.ListAPIView):
     def get_queryset(self):
         """
         Товары, видимые в каталоге, с аннотацией эффективной цены.
-
-        effective_price_anno — вычисляемое в базе поле:
-        discount_price если она задана, иначе base_price.
-        Нужно, чтобы фильтровать и сортировать по реальной цене продажи.
         """
         return Product.objects.filter(
             is_active=True,
@@ -153,15 +109,6 @@ class ProductListView(generics.ListAPIView):
 class WarehouseNearbyView(generics.ListAPIView):
     """
     Склады, отсортированные по расстоянию до точки покупателя.
-
-    Параметры (обязательные):
-        ?lat=<широта>   — например 51.66
-        ?lon=<долгота>  — например 39.20
-
-    Возвращает активные склады с полем distance_km,
-    отсортированные от ближайшего к дальнему.
-
-    GET /api/v1/catalog/warehouses/nearby/?lat=51.66&lon=39.20
     """
 
     serializer_class = WarehouseNearbySerializer
@@ -204,11 +151,6 @@ class WarehouseNearbyView(generics.ListAPIView):
 class CategoryTreeView(generics.ListAPIView):
     """
     Дерево категорий каталога.
-
-    Возвращает только корневые категории (без родителя),
-    каждая — с вложенными дочерними категориями.
-
-    GET /api/v1/catalog/categories/tree/
     """
 
     serializer_class = CategoryTreeSerializer
@@ -216,10 +158,6 @@ class CategoryTreeView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        """
-        Корневые активные категории (parent is null).
-        Дочерние подтягиваются рекурсивно в сериализаторе.
-        """
         return Category.objects.filter(
             is_active=True,
             parent__isnull=True,

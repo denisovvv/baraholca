@@ -1,8 +1,5 @@
 """
 Сериализаторы для API каталога: категории, склады, товары.
-
-Используется паттерн «List → Detail» — короткий сериализатор для списков
-и расширенный для карточек отдельного объекта.
 """
 
 from rest_framework import serializers
@@ -22,9 +19,6 @@ from apps.catalog.models import (
 class CategorySerializer(serializers.ModelSerializer):
     """
     Базовое представление категории.
-
-    Поля parent_name и full_path — вычисляемые, помогают
-    мобильному приложению показывать иерархию без отдельных запросов.
     """
 
     parent_name = serializers.CharField(
@@ -47,18 +41,11 @@ class CategorySerializer(serializers.ModelSerializer):
         ]
 
     def get_full_path(self, obj):
-        """
-        Возвращает полный путь категории, например: 'Посуда → Кружки'.
-        Использует метод модели get_full_path().
-        """
         return obj.get_full_path()
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """
     Категория с вложенными дочерними категориями (дерево).
-
-    Поле children рекурсивно сериализует подкатегории.
-    Используется для построения меню каталога в приложении.
     """
 
     children = serializers.SerializerMethodField()
@@ -76,9 +63,6 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     def get_children(self, obj):
         """
         Рекурсивно сериализует активные дочерние категории.
-
-        obj.children — обратная связь от parent (related_name).
-        Сортируем детей так же, как корневые: по order, затем по имени.
         """
         children = obj.children.filter(is_active=True).order_by('order', 'name')
         return CategoryTreeSerializer(children, many=True).data
@@ -91,9 +75,6 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
 class WarehouseListSerializer(serializers.ModelSerializer):
     """
     Короткое представление склада для списков.
-
-    Используется когда показываем десятки складов на карте.
-    Только самое необходимое: имя, адрес, координаты.
     """
 
     seller_name = serializers.CharField(
@@ -116,24 +97,17 @@ class WarehouseListSerializer(serializers.ModelSerializer):
         ]
 
     def get_latitude(self, obj):
-        """Широта. PostGIS Point: y = latitude."""
+        """Широта."""
         return obj.location.y if obj.location else None
 
     def get_longitude(self, obj):
-        """Долгота. PostGIS Point: x = longitude."""
+        """Долгота."""
         return obj.location.x if obj.location else None
 
 
 class WarehouseDetailSerializer(WarehouseListSerializer):
     """
     Полное представление склада для карточки одного объекта.
-
-    Наследует базовые поля от List и добавляет контактный телефон
-    и часы работы.
-
-    Поле delivery_area (полигон зоны доставки) НЕ включаем — мобильному
-    приложению полигон не нужен, он используется только сервером
-    для расчёта зоны при оформлении заказа.
     """
 
     class Meta(WarehouseListSerializer.Meta):
@@ -145,9 +119,6 @@ class WarehouseDetailSerializer(WarehouseListSerializer):
 class WarehouseNearbySerializer(WarehouseListSerializer):
     """
     Склад с расстоянием до точки покупателя.
-
-    Используется в endpoint поиска ближайших складов.
-    Поле distance_km добавляется аннотацией в queryset (PostGIS).
     """
 
     distance_km = serializers.SerializerMethodField()
@@ -158,9 +129,6 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
     def get_distance_km(self, obj):
         """
         Расстояние до склада в километрах, округлённое до 1 знака.
-
-        obj.distance — это аннотированное PostGIS-поле (объект Distance).
-        Атрибут .km даёт значение в километрах.
         """
         if hasattr(obj, 'distance') and obj.distance is not None:
             return round(obj.distance.km, 1)
@@ -173,10 +141,6 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
 class ProductImageSerializer(serializers.ModelSerializer):
     """
     Фотография товара.
-
-    Возвращает абсолютный URL изображения вместе с относительным путём.
-    Абсолютный URL формируется из request — для разработки получится
-    http://127.0.0.1:8000/..., для прода — https://api.baraxolka.ru/...
     """
 
     image_url = serializers.SerializerMethodField()
@@ -207,9 +171,6 @@ class ProductImageSerializer(serializers.ModelSerializer):
 class ProductStockSerializer(serializers.ModelSerializer):
     """
     Остатки товара по складам.
-
-    ВАЖНО: точное количество (quantity) НЕ возвращается клиенту —
-    это коммерческая информация. Возвращаем только флаг наличия.
     """
 
     warehouse_name = serializers.CharField(
@@ -231,10 +192,6 @@ class ProductStockSerializer(serializers.ModelSerializer):
         ]
 
     def get_available(self, obj):
-        """
-        Доступно ли для покупки.
-        Использует свойство модели available_quantity = quantity - reserved.
-        """
         return obj.available_quantity > 0
 
 
@@ -245,9 +202,6 @@ class ProductStockSerializer(serializers.ModelSerializer):
 class ProductListSerializer(serializers.ModelSerializer):
     """
     Короткое представление товара для списков и каталога.
-
-    Включает главное фото (одно) и эффективную цену (со скидкой если есть).
-    Подробности — в ProductDetailSerializer.
     """
 
     seller_name = serializers.CharField(
@@ -283,8 +237,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     def get_main_image_url(self, obj):
         """
-        URL главного фото товара. Если главного нет — берём первое.
-        Возвращает None если фото вообще нет.
+        URL главного фото товара.
         """
         main = obj.images.filter(is_main=True).first()
         if not main:
@@ -301,9 +254,6 @@ class ProductListSerializer(serializers.ModelSerializer):
 class ProductDetailSerializer(ProductListSerializer):
     """
     Полное представление товара для карточки.
-
-    Включает все фото, остатки по складам, описание,
-    время изготовления (для товаров под заказ).
     """
 
     images = ProductImageSerializer(many=True, read_only=True)

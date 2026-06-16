@@ -1,12 +1,5 @@
 """
 Абстрактный интерфейс SMS-провайдера.
-
-Все конкретные реализации (Console, SmsAero, Zvonok, и т.д.)
-должны наследоваться от SmsProvider и реализовывать метод send().
-
-Это позволяет менять провайдера в одном месте (settings.py)
-без изменений в логике аутентификации и других местах,
-где отправляются SMS.
 """
 
 from abc import ABC, abstractmethod
@@ -15,8 +8,6 @@ from abc import ABC, abstractmethod
 class SmsProvider(ABC):
     """
     Абстрактный SMS-провайдер.
-
-    Контракт для всех реализаций.
     """
 
     @abstractmethod

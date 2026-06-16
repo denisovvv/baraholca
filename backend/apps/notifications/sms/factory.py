@@ -22,13 +22,7 @@ PROVIDERS = {
 
 def get_sms_provider() -> SmsProvider:
     """
-    Возвращает экземпляр SMS-провайдера, настроенного в settings.
-
-    settings.SMS_PROVIDER — строка ('console', 'sms_aero', и т.д.)
-
-    Raises:
-        ImproperlyConfigured: если SMS_PROVIDER не задан
-            или указан неизвестный провайдер.
+    Возвращает экземпляр SMS-провайдера
     """
     provider_name = getattr(settings, 'SMS_PROVIDER', None)
 
