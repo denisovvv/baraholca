@@ -55,8 +55,13 @@ class WarehouseAdmin(GISModelAdmin):
     Админка для склада с поддержкой гео-полей.
     Используется встроенная GISModelAdmin Django с картой OpenStreetMap.
     """
-# Начальный вид карты — центр между Воронежем и Белгородом
 
+    class Media:
+        css = {
+            'all': ('admin/css/gis_map_fix.css',)
+        }
+
+    # Начальный вид карты — центр между Воронежем и Белгородом
     def formfield_for_dbfield(self, db_field, request, **kwargs):
         """
         Подменяем стандартное JSON-поле working_hours на наш кастомный виджет.

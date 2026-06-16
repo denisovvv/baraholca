@@ -1,0 +1,31 @@
+/* Фикс карты GeoDjango (OpenLayers) в теме Unfold.
+   Unfold схлопывает контейнер карты до нулевой высоты —
+   задаём явные размеры контейнеру .dj_map и его обёртке. */
+
+.dj_map_wrapper {
+    width: 100%;
+    max-width: 700px;
+    margin-bottom: 12px;
+}
+
+.dj_map {
+    width: 100% !important;
+    height: 400px !important;
+    min-height: 400px !important;
+    border: 1px solid rgba(128, 128, 128, 0.3);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* Карта OpenLayers внутри контейнера должна занять всю высоту */
+.dj_map .ol-viewport,
+.dj_map canvas {
+    border-radius: 8px;
+}
+
+/* Ссылка очистки — отступ сверху, чтобы не липла к карте */
+.clear_features {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+}
