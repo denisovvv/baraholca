@@ -224,3 +224,32 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# ============================================================================
+# Security settings for production
+# ============================================================================
+# Эти настройки включаются только когда DEBUG=False (на проде).
+# Локально (DEBUG=True) они не применяются, чтобы не мешать разработке
+# без HTTPS.
+
+if not DEBUG:
+    # Перенаправлять весь HTTP-трафик на HTTPS
+    SECURE_SSL_REDIRECT = True
+
+    # HSTS — заставляет браузер всегда использовать HTTPS для этого домена.
+    # Начинаем с 1 часа (3600) для безопасности; после проверки на проде
+    # можно увеличить до года (31536000).
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+    # Куки только по HTTPS
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+    # Доверять заголовку X-Forwarded-Proto от nginx
+    # (nginx терминирует SSL и сообщает Django, что соединение по HTTPS)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+    # Дополнительные защитные заголовки
+    SECURE_CONTENT_TYPE_NOSNIFF = True
