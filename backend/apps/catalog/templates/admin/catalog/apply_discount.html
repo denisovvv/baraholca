@@ -10,19 +10,62 @@
 {% endblock %}
 
 {% block content %}
+<style>
+    #content input[type="number"],
+    #content input[type="text"] {
+        border: 1px solid rgba(128,128,128,0.4);
+        border-radius: 6px;
+        padding: 8px 10px;
+        font-size: 14px;
+        min-width: 200px;
+    }
+    #content input[type="number"]:focus,
+    #content input[type="text"]:focus {
+        border-color: rgba(128,128,128,0.7);
+        outline: none;
+    }#content input[type="number"]:focus,
+    #content input[type="text"]:focus {
+        border-color: rgba(128,128,128,0.7);
+        outline: none;
+    }
+    #content .submit-row input[type="submit"] {
+        background: #7c3aed;
+        color: #fff;
+        border: none;
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+    #content .submit-row input[type="submit"]:hover {
+        background: #6d28d9;
+    }
+    #content .submit-row a.button {
+        display: inline-block;
+        background: transparent;    
+        color: inherit;
+        border: 1px solid rgba(128,128,128,0.4);
+        border-radius: 6px;
+        padding: 10px 20px;
+        font-size: 14px;
+        text-decoration: none;
+    }
+    #content .submit-row a.button:hover {
+        border-color: rgba(128,128,128,0.7);
+    }
+</style>
 <h1>{{ title }}</h1>
-
 <p>Выбрано товаров: <strong>{{ products_count }}</strong></p>
 
 {% if preview %}
-<div style="background: #2b2b2b; padding: 15px; border-radius: 4px; margin: 20px 0;">
-    <h3 style="margin-top: 0;">Предпросмотр (первые 5 товаров):</h3>
+<div class="module" style="padding: 20px; margin: 20px 0; border: 1px solid rgba(128,128,128,0.3); border-radius: 8px;">    <h3 style="margin-top: 0;">Предпросмотр (первые 5 товаров):</h3>
     <table style="width: 100%; border-collapse: collapse;">
         <thead>
             <tr>
-                <th style="padding: 8px; text-align: left; border-bottom: 1px solid #444;">Товар</th>
-                <th style="padding: 8px; text-align: right; border-bottom: 1px solid #444;">Базовая цена</th>
-                <th style="padding: 8px; text-align: right; border-bottom: 1px solid #444;">Текущая скидка</th>
+                <th style="padding: 8px; text-align: left;">Товар</th>
+                <th style="padding: 8px; text-align: right;">Базовая цена</th>
+                <th style="padding: 8px; text-align: right;">Текущая скидка</th>
             </tr>
         </thead>
         <tbody>
@@ -42,46 +85,44 @@
 
 <form method="post">
     {% csrf_token %}
-
     {% for product_id in selected_ids %}
         <input type="hidden" name="_selected_action" value="{{ product_id }}">
     {% endfor %}
     <input type="hidden" name="action" value="apply_discount_action">
 
-    <div style="background: #2b2b2b; padding: 20px; border-radius: 4px; max-width: 600px;">
-        {% if form.errors %}
-        <div style="background: #5c1f1f; padding: 10px; border-radius: 4px; margin-bottom: 15px;">
+<fieldset class="module aligned" style="padding: 20px; max-width: 600px; border: 1px solid rgba(128,128,128,0.3); border-radius: 8px;">        {% if form.errors %}
+        <ul class="errorlist">
             {% for field, errors in form.errors.items %}
                 {% for error in errors %}
-                    <div>{{ error }}</div>
+                    <li>{{ error }}</li>
                 {% endfor %}
             {% endfor %}
-        </div>
+        </ul>
         {% endif %}
 
-        <div style="margin-bottom: 20px;">
+        <div class="form-row" style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 8px; font-weight: bold;">{{ form.discount_type.label }}:</label>
             {% for radio in form.discount_type %}
                 <div style="margin: 5px 0;">{{ radio }}</div>
             {% endfor %}
         </div>
 
-        <div style="margin-bottom: 20px;">
+        <div class="form-row" style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 5px;">{{ form.percent_value.label }}:</label>
             {{ form.percent_value }}
-            <div style="font-size: 0.9em; color: #aaa; margin-top: 3px;">{{ form.percent_value.help_text }}</div>
+            <div class="help" style="margin-top: 3px;">{{ form.percent_value.help_text }}</div>
         </div>
 
-        <div style="margin-bottom: 20px;">
+        <div class="form-row" style="margin-bottom: 20px;">
             <label style="display: block; margin-bottom: 5px;">{{ form.fixed_value.label }}:</label>
             {{ form.fixed_value }}
-            <div style="font-size: 0.9em; color: #aaa; margin-top: 3px;">{{ form.fixed_value.help_text }}</div>
+            <div class="help" style="margin-top: 3px;">{{ form.fixed_value.help_text }}</div>
         </div>
 
-        <div style="margin-top: 25px;">
+        <div class="submit-row" style="margin-top: 25px;">
             <input type="submit" name="apply" value="Применить скидку" class="default" style="margin-right: 10px;">
             <a href="{% url 'admin:catalog_product_changelist' %}" class="button">Отмена</a>
         </div>
-    </div>
+    </fieldset>
 </form>
 {% endblock %}
