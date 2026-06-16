@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
+    'drf_spectacular',
 
     # Project apps
     'apps.users',
@@ -168,6 +169,7 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # ============================================================================
@@ -211,3 +213,15 @@ CACHES = {
 # Допустимые значения: 'console' (для разработки).
 # В будущем: 'sms_aero', 'zvonok' (когда заказчик выберет провайдера).
 SMS_PROVIDER = 'console'
+
+# ============================================================================
+# API documentation (drf-spectacular)
+# ============================================================================
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Baraxolka API',
+    'DESCRIPTION': 'Backend API мобильного маркетплейса Baraxolka: '
+                   'аутентификация по SMS, каталог товаров, склады, геопоиск.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
