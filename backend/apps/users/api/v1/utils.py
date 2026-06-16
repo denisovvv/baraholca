@@ -11,9 +11,10 @@
 """
 
 import secrets
+import re
 
 from django.core.cache import cache
-
+from rest_framework.exceptions import ValidationError
 
 # Время жизни кода подтверждения в секундах
 SMS_CODE_TTL = 300  # 5 минут
@@ -193,3 +194,24 @@ def increment_attempts(phone: str) -> int:
 def reset_attempts(phone: str) -> None:
     """Сбрасывает счётчик попыток (после успешного входа или блокировки)."""
     cache.delete(_attempts_key(phone))
+
+def normalize_phone(value: str) -> str:
+    """
+    Нормализует номер телефона к формату +7XXXXXXXXXX.
+
+    Принимает 8XXXXXXXXXX, 7XXXXXXXXXX, +7XXXXXXXXXX и варианты
+    с пробелами, скобками, дефисами. Лишние символы отбрасываются.
+
+    Raises:
+        ValidationError: если номер не приводится к корректному виду.
+    """
+    digits = re.sub(r'\D', '', value)
+
+    if len(digits) == 11 and digits[0] in ('7', '8'):
+        digits = '7' + digits[1:]
+    else:
+        raise ValidationError(
+            'Введите корректный номер телефона в формате +7XXXXXXXXXX'
+        )
+
+    return '+' + digits
