@@ -6,8 +6,7 @@
 """
 
 from django.core.cache import cache
-from rest_framework.test import APIClient
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from apps.users.api.v1.utils import get_sms_code
 from apps.users.models import User

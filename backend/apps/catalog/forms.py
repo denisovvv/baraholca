@@ -6,7 +6,6 @@ import json
 
 from django import forms
 
-
 DAYS_OF_WEEK = [
     ('monday', 'Понедельник'),
     ('tuesday', 'Вторник'),
@@ -112,7 +111,7 @@ class WorkingHoursFormField(forms.CharField):
             return json.loads(value)
         except (ValueError, TypeError):
             return None
-        
+
 class ApplyDiscountForm(forms.Form):
     """
     Форма для применения массовой скидки к выбранным товарам.

@@ -2,14 +2,14 @@
 API views для каталога: категории, склады, товары.
 """
 
-from rest_framework import filters, generics
-from rest_framework.permissions import AllowAny
-from rest_framework.exceptions import ValidationError
-
-from django.db.models import Case, DecimalField, F, When
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
+from django.db.models import Case, DecimalField, F, When
+from rest_framework import generics
+from rest_framework.exceptions import ValidationError
+from rest_framework.permissions import AllowAny
 
+from apps.catalog.api.v1.filters import ProductFilter
 from apps.catalog.api.v1.serializers import (
     CategorySerializer,
     CategoryTreeSerializer,
@@ -19,7 +19,7 @@ from apps.catalog.api.v1.serializers import (
     WarehouseNearbySerializer,
 )
 from apps.catalog.models import Category, Product, Warehouse
-from apps.catalog.api.v1.filters import ProductFilter
+
 
 class CategoryListView(generics.ListAPIView):
     """
@@ -34,7 +34,7 @@ class CategoryListView(generics.ListAPIView):
         return Category.objects.filter(
             is_active=True,
         ).order_by('order', 'name')
-    
+
 class WarehouseListView(generics.ListAPIView):
     """
     Список всех активных складов.
@@ -49,7 +49,7 @@ class WarehouseListView(generics.ListAPIView):
         return Warehouse.objects.filter(
             is_active=True,
         ).select_related('seller').order_by('name')
-    
+
 class ProductDetailView(generics.RetrieveAPIView):
     """
     Карточка одного товара со всеми деталями.
@@ -73,7 +73,7 @@ class ProductDetailView(generics.RetrieveAPIView):
             'images',
             'stocks__warehouse',
         )
-    
+
 class ProductListView(generics.ListAPIView):
     """
     Список товаров с фильтрацией, поиском и пагинацией.
@@ -105,7 +105,7 @@ class ProductListView(generics.ListAPIView):
                 output_field=DecimalField(max_digits=12, decimal_places=2),
             )
         )
-    
+
 class WarehouseNearbyView(generics.ListAPIView):
     """
     Склады, отсортированные по расстоянию до точки покупателя.
@@ -147,7 +147,7 @@ class WarehouseNearbyView(generics.ListAPIView):
         ).annotate(
             distance=Distance('location', user_location),
         ).select_related('seller').order_by('distance')
-    
+
 class CategoryTreeView(generics.ListAPIView):
     """
     Дерево категорий каталога.

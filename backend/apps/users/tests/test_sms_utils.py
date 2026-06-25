@@ -8,15 +8,15 @@ from django.core.cache import cache
 from django.test import TestCase
 
 from apps.users.api.v1.utils import (
-    generate_sms_code,
-    save_sms_code,
-    get_sms_code,
     delete_sms_code,
-    is_rate_limited_by_phone,
-    increment_rate_phone,
+    generate_sms_code,
     get_attempts,
+    get_sms_code,
     increment_attempts,
+    increment_rate_phone,
+    is_rate_limited_by_phone,
     reset_attempts,
+    save_sms_code,
 )
 
 

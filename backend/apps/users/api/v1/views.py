@@ -7,6 +7,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+
 from apps.notifications.sms.base import SmsProviderError
 from apps.notifications.sms.factory import get_sms_provider
 from apps.users.api.v1.serializers import (
@@ -57,7 +58,7 @@ class SmsRequestView(APIView):
                 },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
-        
+
         if is_rate_limited_by_phone(phone):
             return Response(
                 {
@@ -67,7 +68,7 @@ class SmsRequestView(APIView):
                 },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
-        
+
         code = generate_sms_code()
         save_sms_code(phone, code)
 
@@ -98,7 +99,7 @@ class SmsRequestView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-    
+
 class SmsVerifyView(APIView):
     """
     Проверка SMS-кода и выдача JWT-токенов.

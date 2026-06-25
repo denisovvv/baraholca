@@ -6,7 +6,6 @@ import logging
 
 from apps.notifications.sms.base import SmsProvider
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -26,7 +25,7 @@ class ConsoleSmsProvider(SmsProvider):
         print(message)
         print('=' * 60)
 
-      
+
         logger.warning(
             'ConsoleSmsProvider used to send SMS to %s. '
             'This should never happen in production.',

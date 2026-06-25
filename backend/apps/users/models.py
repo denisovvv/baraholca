@@ -94,7 +94,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name='Apple ID',
         help_text='ID пользователя в Apple (sub-токен из Apple Sign In)'
     )
-    
+
     is_active = models.BooleanField(
         default=True,
         verbose_name='Активен'

@@ -140,4 +140,3 @@ class CategoryValidationTests(TestCase):
         level4 = Category(name='Уровень 4', parent=level3)
         with self.assertRaises(ValidationError):
             level4.full_clean()
-            

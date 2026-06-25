@@ -3,11 +3,9 @@ URL маршруты для API пользователей и аутентифи
 """
 
 from django.urls import path
-
-from apps.users.api.v1 import views
-
 from rest_framework_simplejwt.views import TokenRefreshView
 
+from apps.users.api.v1 import views
 
 app_name = 'users_api_v1'
 

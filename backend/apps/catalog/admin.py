@@ -4,10 +4,10 @@ from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
-from django.urls import reverse
 
 from apps.catalog.forms import ApplyDiscountForm, WorkingHoursFormField
 from apps.catalog.models import Category, Product, ProductImage, ProductStock, Warehouse
+
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):

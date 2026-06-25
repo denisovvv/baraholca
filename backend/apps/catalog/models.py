@@ -1,7 +1,7 @@
 from django.contrib.gis.db import models as gis_models
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
-from django.core.exceptions import ValidationError
 
 
 class Category(models.Model):
@@ -89,7 +89,7 @@ class Category(models.Model):
         if self.parent:
             return self.parent.get_level() + 1
         return 0
-    
+
     def clean(self):
         """
         Валидация на уровне модели:
@@ -119,7 +119,7 @@ class Category(models.Model):
                         'parent': 'Обнаружен цикл — категория не может быть потомком самой себя'
                     })
                 parent = parent.parent
-    
+
 class Warehouse(models.Model):
     """
     Склад / точка продавца.
@@ -208,7 +208,7 @@ class Warehouse(models.Model):
 
     def __str__(self):
         return f'{self.name} ({self.seller.short_name or self.seller.name})'
-    
+
 class Product(models.Model):
     """
     Товар. Главная модель каталога.
@@ -358,7 +358,7 @@ class Product(models.Model):
             and self.is_available_for_sale
             and self.seller.is_active
         )
-    
+
     def has_stock(self):
         """
         Проверяет, есть ли товар в наличии хотя бы на одном складе.
@@ -438,7 +438,7 @@ class ProductImage(models.Model):
                 product=self.product,
                 is_main=True
             ).exclude(pk=self.pk).update(is_main=False)
-        super().save(*args, **kwargs)   
+        super().save(*args, **kwargs)
 
 
 class ProductStock(models.Model):
@@ -520,6 +520,5 @@ class ProductStock(models.Model):
         if self.reserved_quantity > self.quantity:
             raise ValidationError({
                 'reserved_quantity': f'Резерв ({self.reserved_quantity}) не может превышать остаток ({self.quantity})'
-            }) 
+            })
 
-    

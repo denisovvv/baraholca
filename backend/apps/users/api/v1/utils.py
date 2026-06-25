@@ -5,13 +5,13 @@
 хранение кодов, rate limiting.
 """
 
-import secrets
 import re
+import secrets
 
 from django.core.cache import cache
 from rest_framework.exceptions import ValidationError
 
-# Время жизни кода 
+# Время жизни кода
 SMS_CODE_TTL = 300  # 5 минут
 
 # Rate limiting — по номеру телефона
