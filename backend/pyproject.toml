@@ -21,3 +21,79 @@ dependencies = [
 
 [tool.uv]
 package = false
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.19",
+]
+
+# ============================================================================
+# Ruff
+# ============================================================================
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+extend-exclude = [
+    "*/migrations/*",
+    "staticfiles",
+    "media",
+    ".venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes (неиспользуемое, undefined)
+    "I",      # isort (порядок импортов)
+    "N",      # pep8-naming
+    "UP",     # pyupgrade (list[str] вместо List[str] и т.п.)
+    "B",      # flake8-bugbear (типовые баги)
+    "ANN",    # flake8-annotations (типизация по гайдлайнам)
+    "S",      # flake8-bandit (безопасность)
+    "BLE",    # flake8-blind-except (никаких except Exception: pass)
+    "C4",     # flake8-comprehensions
+    "DJ",     # flake8-django
+    "DTZ",    # flake8-datetimez (явные таймзоны)
+    "T20",    # flake8-print (никаких print() в продакшен-коде)
+    "SIM",    # flake8-simplify
+    "TID",    # flake8-tidy-imports (импорты на верхнем уровне)
+    "RUF",    # ruff-specific
+    "PL",     # pylint
+    "TRY",    # tryceratops (правильные исключения, raise ... from)
+]
+ignore = [
+    # PLR0913 (too many arguments) — Django views/serializers часто >5 параметров
+    # (request, pk, format, *args, **kwargs). Гайдлайн «5+ → DTO» применяется к
+    # бизнес-операциям, не к транспортному слою. Ловим через ревью, не линтером.
+    "PLR0913",
+]
+# Русский язык в комментариях и docstrings — это норма для проекта,
+# не омоглифная атака. Разрешаем кириллические символы, похожие на латиницу
+# (правила RUF001/RUF002/RUF003 остаются включёнными и ловят НАСТОЯЩИЕ
+# подмены, например латинскую 'a' среди кириллицы).
+allowed-confusables = [
+    "а", "А", "в", "В", "е", "Е", "к", "К", "м", "М",
+    "н", "Н", "о", "О", "р", "Р", "с", "С", "т", "Т",
+    "у", "У", "х", "Х", "б", "г",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Тесты: разрешаем asserts, magic numbers, длинные имена сценариев
+"**/tests/**" = ["S101", "PLR2004", "ANN", "PLR0915"]
+"**/test_*.py" = ["S101", "PLR2004", "ANN", "PLR0915"]
+# settings.py: разрешаем "магические" константы и длинные конфиги
+"config/settings.py" = ["PLR2004", "E501", "S105"]
+# manage.py: служебный, Django сам генерирует
+"manage.py" = ["ANN", "T20"]
+# __init__.py: часто пустые или содержат только re-export
+"**/__init__.py" = ["F401", "D"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "config"]
+combine-as-imports = true
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
