@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.contrib.gis.db import models as gis_models
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -46,7 +48,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
-        ordering = ["order", "name"]
+        ordering: ClassVar[list[str]] = ["order", "name"]
 
     def __str__(self):
         return self.get_full_path()
@@ -173,7 +175,7 @@ class Warehouse(models.Model):
     class Meta:
         verbose_name = "Склад"
         verbose_name_plural = "Склады"
-        ordering = ["seller__name", "name"]
+        ordering: ClassVar[list[str]] = ["seller__name", "name"]
 
     def __str__(self):
         return f"{self.name} ({self.seller.short_name or self.seller.name})"
@@ -191,7 +193,7 @@ class Product(models.Model):
     TYPE_STOCK = "stock"
     TYPE_MADE_TO_ORDER = "made_to_order"
 
-    TYPE_CHOICES = [
+    TYPE_CHOICES: ClassVar[list[tuple[str, str]]] = [
         (TYPE_STOCK, "Со склада"),
         (TYPE_MADE_TO_ORDER, "Под заказ (3D-печать)"),
     ]
@@ -275,8 +277,8 @@ class Product(models.Model):
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["seller", "is_active"]),
             models.Index(fields=["category", "is_active"]),
             models.Index(fields=["is_available_for_sale", "is_active"]),
@@ -356,7 +358,7 @@ class ProductImage(models.Model):
     class Meta:
         verbose_name = "Фотография товара"
         verbose_name_plural = "Фотографии товаров"
-        ordering = ["-is_main", "order", "created_at"]
+        ordering: ClassVar[list[str]] = ["-is_main", "order", "created_at"]
 
     def __str__(self):
         return f"Фото {self.product.name_short} ({'главное' if self.is_main else 'доп.'})"
@@ -403,13 +405,13 @@ class ProductStock(models.Model):
     class Meta:
         verbose_name = "Остаток на складе"
         verbose_name_plural = "Остатки на складах"
-        ordering = ["product", "warehouse"]
-        constraints = [
+        ordering: ClassVar[list[str]] = ["product", "warehouse"]
+        constraints: ClassVar[list[models.UniqueConstraint]] = [
             models.UniqueConstraint(
                 fields=["product", "warehouse"], name="unique_product_warehouse_stock"
             )
         ]
-        indexes = [
+        indexes: ClassVar[list[models.Index]] = [
             models.Index(fields=["warehouse"]),
             models.Index(fields=["product", "warehouse"]),
         ]

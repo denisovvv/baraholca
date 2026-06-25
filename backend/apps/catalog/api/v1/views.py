@@ -2,12 +2,14 @@
 API views для каталога: категории, склады, товары.
 """
 
+from typing import ClassVar
+
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Case, DecimalField, F, When
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, BasePermission
 
 from apps.catalog.api.v1.filters import ProductFilter
 from apps.catalog.api.v1.serializers import (
@@ -27,7 +29,7 @@ class CategoryListView(generics.ListAPIView):
     """
 
     serializer_class = CategorySerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None  # категорий немного, пагинация не нужна
 
     def get_queryset(self):
@@ -42,7 +44,7 @@ class WarehouseListView(generics.ListAPIView):
     """
 
     serializer_class = WarehouseListSerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None  # складов немного
 
     def get_queryset(self):
@@ -62,7 +64,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     """
 
     serializer_class = ProductDetailSerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     lookup_field = "id"
 
     def get_queryset(self):
@@ -91,11 +93,11 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductListSerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     filterset_class = ProductFilter
-    search_fields = ["name_short", "name_full"]
-    ordering_fields = ["effective_price_anno", "name_short"]
-    ordering = ["name_short"]  # сортировка по умолчанию
+    search_fields: ClassVar[list[str]] = ["name_short", "name_full"]
+    ordering_fields: ClassVar[list[str]] = ["effective_price_anno", "name_short"]
+    ordering: ClassVar[list[str]] = ["name_short"]  # сортировка по умолчанию
 
     def get_queryset(self):
         """
@@ -129,7 +131,7 @@ class WarehouseNearbyView(generics.ListAPIView):
     """
 
     serializer_class = WarehouseNearbySerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None
 
     def get_queryset(self):
@@ -174,7 +176,7 @@ class CategoryTreeView(generics.ListAPIView):
     """
 
     serializer_class = CategoryTreeSerializer
-    permission_classes = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None
 
     def get_queryset(self):

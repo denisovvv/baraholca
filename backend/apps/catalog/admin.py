@@ -1,4 +1,5 @@
 from decimal import Decimal
+from typing import ClassVar
 
 from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
@@ -15,7 +16,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name", "slug", "description")
     list_editable = ("order", "is_active")
-    prepopulated_fields = {"slug": ("name",)}
+    prepopulated_fields: ClassVar[dict[str, tuple[str, ...]]] = {"slug": ("name",)}
     autocomplete_fields = ("parent",)
 
     fieldsets = (
@@ -48,7 +49,7 @@ class WarehouseAdmin(GISModelAdmin):
     """
 
     class Media:
-        css = {"all": ("admin/css/gis_map_fix.css",)}
+        css: ClassVar[dict[str, tuple[str, ...]]] = {"all": ("admin/css/gis_map_fix.css",)}
 
     # Начальный вид карты — центр между Воронежем и Белгородом
     def formfield_for_dbfield(self, db_field, request, **kwargs):
@@ -59,7 +60,7 @@ class WarehouseAdmin(GISModelAdmin):
             return WorkingHoursFormField(label=db_field.verbose_name, required=False)
         return super().formfield_for_dbfield(db_field, request, **kwargs)
 
-    gis_widget_kwargs = {
+    gis_widget_kwargs: ClassVar[dict[str, dict[str, float | int]]] = {
         "attrs": {
             "default_lat": 51.1,
             "default_lon": 37.9,
@@ -137,7 +138,7 @@ class ProductAdmin(admin.ModelAdmin):
     флаг is_active, время изготовления (для made_to_order).
     """
 
-    inlines = [ProductImageInline, ProductStockInline]
+    inlines: ClassVar[list[type[admin.TabularInline]]] = [ProductImageInline, ProductStockInline]
 
     list_display = (
         "name_short",
@@ -240,7 +241,7 @@ class ProductAdmin(admin.ModelAdmin):
         obj.full_clean()
         super().save_model(request, obj, form, change)
 
-    actions = ["apply_discount_action"]
+    actions: ClassVar[list[str]] = ["apply_discount_action"]
 
     def apply_discount_action(self, request, queryset):
         """

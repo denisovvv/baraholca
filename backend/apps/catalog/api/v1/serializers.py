@@ -2,6 +2,8 @@
 Сериализаторы для API каталога: категории, склады, товары.
 """
 
+from typing import ClassVar
+
 from rest_framework import serializers
 
 from apps.catalog.models import (
@@ -31,7 +33,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "name",
             "slug",
@@ -54,7 +56,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "name",
             "slug",
@@ -89,7 +91,7 @@ class WarehouseListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Warehouse
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "name",
             "seller_name",
@@ -114,7 +116,7 @@ class WarehouseDetailSerializer(WarehouseListSerializer):
     """
 
     class Meta(WarehouseListSerializer.Meta):
-        fields = WarehouseListSerializer.Meta.fields + [
+        fields: ClassVar[list[str]] = WarehouseListSerializer.Meta.fields + [
             "contact_phone",
             "working_hours",
         ]
@@ -128,7 +130,7 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
     distance_km = serializers.SerializerMethodField()
 
     class Meta(WarehouseListSerializer.Meta):
-        fields = WarehouseListSerializer.Meta.fields + ["distance_km"]
+        fields: ClassVar[list[str]] = WarehouseListSerializer.Meta.fields + ["distance_km"]
 
     def get_distance_km(self, obj):
         """
@@ -153,7 +155,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductImage
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "image_url",
             "order",
@@ -192,7 +194,7 @@ class ProductStockSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ProductStock
-        fields = [
+        fields: ClassVar[list[str]] = [
             "warehouse_name",
             "warehouse_address",
             "available",
@@ -231,7 +233,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Product
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "name_short",
             "seller_name",
@@ -268,7 +270,7 @@ class ProductDetailSerializer(ProductListSerializer):
     stocks = ProductStockSerializer(many=True, read_only=True)
 
     class Meta(ProductListSerializer.Meta):
-        fields = ProductListSerializer.Meta.fields + [
+        fields: ClassVar[list[str]] = ProductListSerializer.Meta.fields + [
             "name_full",
             "description",
             "production_time_days",

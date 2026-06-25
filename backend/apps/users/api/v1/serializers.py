@@ -1,9 +1,10 @@
 """
 Сериализаторы для API пользователей.
-
 UserSerializer — представление профиля пользователя для мобильного приложения.
 Скрывает все внутренние и серверные поля.
 """
+
+from typing import ClassVar
 
 from rest_framework import serializers
 
@@ -18,14 +19,14 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "phone",
             "first_name",
             "last_name",
             "phone_verified",
         ]
-        read_only_fields = [
+        read_only_fields: ClassVar[list[str]] = [
             "id",
             "phone",
             "phone_verified",
@@ -39,7 +40,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
+        fields: ClassVar[list[str]] = [
             "first_name",
             "last_name",
         ]

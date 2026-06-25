@@ -2,6 +2,8 @@
 Фильтры для API каталога.
 """
 
+from typing import ClassVar
+
 import django_filters
 
 from apps.catalog.models import Product
@@ -23,4 +25,4 @@ class ProductFilter(django_filters.FilterSet):
 
     class Meta:
         model = Product
-        fields = ["category", "seller"]
+        fields: ClassVar[list[str]] = ["category", "seller"]

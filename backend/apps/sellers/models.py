@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from django.conf import settings
 from django.db import models
 
@@ -15,7 +17,6 @@ class Seller(models.Model):
         verbose_name="UUID в 1С",
         help_text="Уникальный идентификатор продавца в системе 1С",
     )
-
     # Юридические данные
     name = models.CharField(
         max_length=255, verbose_name="Название", help_text="Например: ИП Иванов И.И."
@@ -28,11 +29,9 @@ class Seller(models.Model):
     )
     inn = models.CharField(max_length=12, unique=True, verbose_name="ИНН")
     ogrnip = models.CharField(max_length=15, unique=True, verbose_name="ОГРНИП")
-
     # Контактные данные
     contact_phone = models.CharField(max_length=20, blank=True, verbose_name="Контактный телефон")
     contact_email = models.EmailField(blank=True, verbose_name="Контактный email")
-
     # Связь с пользователем-администратором
     admin_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -43,14 +42,12 @@ class Seller(models.Model):
         verbose_name="Администратор",
         help_text="Пользователь, который управляет этим продавцом в админке",
     )
-
     # Статус
     is_active = models.BooleanField(
         default=True,
         verbose_name="Активен",
         help_text="Если выключено — товары продавца не отображаются в каталоге",
     )
-
     # Даты
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создан")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлён")
@@ -58,7 +55,7 @@ class Seller(models.Model):
     class Meta:
         verbose_name = "Продавец"
         verbose_name_plural = "Продавцы"
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
 
     def __str__(self):
         return self.short_name or self.name
@@ -73,13 +70,11 @@ class SellerStaff(models.Model):
     ROLE_ADMIN = "admin"
     ROLE_MANAGER = "manager"
     ROLE_STOREKEEPER = "storekeeper"
-
-    ROLE_CHOICES = [
+    ROLE_CHOICES: ClassVar[list[tuple[str, str]]] = [
         (ROLE_ADMIN, "Администратор"),
         (ROLE_MANAGER, "Менеджер заказов"),
         (ROLE_STOREKEEPER, "Кладовщик"),
     ]
-
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -96,8 +91,8 @@ class SellerStaff(models.Model):
     class Meta:
         verbose_name = "Сотрудник продавца"
         verbose_name_plural = "Сотрудники продавцов"
-        ordering = ["-created_at"]
-        constraints = [
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        constraints: ClassVar[list[models.UniqueConstraint]] = [
             models.UniqueConstraint(fields=["user", "seller"], name="unique_user_seller_role")
         ]
 

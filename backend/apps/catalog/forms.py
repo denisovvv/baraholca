@@ -3,6 +3,7 @@
 """
 
 import json
+from typing import ClassVar
 
 from django import forms
 
@@ -125,7 +126,7 @@ class ApplyDiscountForm(forms.Form):
     DISCOUNT_TYPE_PERCENT = "percent"
     DISCOUNT_TYPE_FIXED = "fixed"
 
-    DISCOUNT_TYPE_CHOICES = [
+    DISCOUNT_TYPE_CHOICES: ClassVar[list[tuple[str, str]]] = [
         (DISCOUNT_TYPE_PERCENT, "В процентах от базовой цены"),
         (DISCOUNT_TYPE_FIXED, "Фиксированная сумма скидки в рублях"),
     ]
