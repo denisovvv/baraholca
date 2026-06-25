@@ -54,7 +54,11 @@ class Category(models.Model):
     def __str__(self) -> str:
         return self.get_full_path()
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(
+        self,
+        *args: Any,  # noqa: ANN401  # Django Model.save() принимает произвольные позиционные аргументы
+        **kwargs: Any,  # noqa: ANN401  # Django Model.save() принимает force_insert, using, update_fields и т.п.
+    ) -> None:
         # Автогенерация slug, если не заполнен
         if not self.slug:
             self.slug = slugify(self.name, allow_unicode=True)
@@ -364,7 +368,11 @@ class ProductImage(models.Model):
     def __str__(self) -> str:
         return f"Фото {self.product.name_short} ({'главное' if self.is_main else 'доп.'})"
 
-    def save(self, *args: Any, **kwargs: Any) -> None:
+    def save(
+        self,
+        *args: Any,  # noqa: ANN401  # Django Model.save() принимает произвольные позиционные аргументы
+        **kwargs: Any,  # noqa: ANN401  # Django Model.save() принимает force_insert, using, update_fields и т.п.
+    ) -> None:
         """
         Если это фото отмечается как главное — сбрасываем флаг у всех остальных фото товара.
         Это гарантирует, что у одного товара только одно главное фото.

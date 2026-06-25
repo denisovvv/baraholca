@@ -65,7 +65,7 @@ class WarehouseAdmin(GISModelAdmin):
         self,
         db_field: models.Field,
         request: HttpRequest,
-        **kwargs: Any,
+        **kwargs: Any,  # noqa: ANN401  # Django хук formfield_for_dbfield принимает произвольные аргументы
     ) -> forms.Field | None:
         """
         Подменяем стандартное JSON-поле working_hours на наш кастомный виджет.

@@ -62,7 +62,7 @@ class WorkingHoursWidget(forms.Widget):
     def get_context(
         self,
         name: str,
-        value: Any,
+        value: Any,  # noqa: ANN401  # Django Widget hook: None | str | dict | list
         attrs: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """
@@ -109,11 +109,18 @@ class WorkingHoursFormField(forms.CharField):
 
     widget = WorkingHoursWidget
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(
+        self,
+        *args: Any,  # noqa: ANN401  # Django Field конструктор принимает произвольные позиционные аргументы
+        **kwargs: Any,  # noqa: ANN401  # Django Field конструктор принимает произвольные именованные аргументы
+    ) -> None:
         kwargs.setdefault("required", False)
         super().__init__(*args, **kwargs)
 
-    def to_python(self, value: Any) -> dict[str, Any] | list[Any] | None:
+    def to_python(
+        self,
+        value: Any,  # noqa: ANN401  # Django Field hook: None | str | dict | list из формы или БД
+    ) -> dict[str, Any] | list[Any] | None:
         """
         Возвращает Python-объект из строки JSON.
         Django при сохранении в JSONField сам поймёт что это dict.

@@ -14,7 +14,7 @@ class UserManager(BaseUserManager):
         self,
         phone: str,
         password: str | None = None,
-        **extra_fields: Any,
+        **extra_fields: Any,  # noqa: ANN401  # Django менеджер принимает произвольные поля модели
     ) -> "User":
         """
         Создаёт обычного пользователя (покупателя) по номеру телефона.
@@ -35,7 +35,7 @@ class UserManager(BaseUserManager):
         self,
         phone: str,
         password: str | None = None,
-        **extra_fields: Any,
+        **extra_fields: Any,  # noqa: ANN401  # Django менеджер принимает произвольные поля модели
     ) -> "User":
         """
         Создаёт суперпользователя для администрирования.
