@@ -1,4 +1,4 @@
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
@@ -10,7 +10,12 @@ class UserManager(BaseUserManager):
     Менеджер для создания пользователей по номеру телефона.
     """
 
-    def create_user(self, phone, password=None, **extra_fields):
+    def create_user(
+        self,
+        phone: str,
+        password: str | None = None,
+        **extra_fields: Any,
+    ) -> "User":
         """
         Создаёт обычного пользователя (покупателя) по номеру телефона.
         Пароль обычно не указывается — покупатели входят по коду подтверждения.
@@ -26,7 +31,12 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, phone, password=None, **extra_fields):
+    def create_superuser(
+        self,
+        phone: str,
+        password: str | None = None,
+        **extra_fields: Any,
+    ) -> "User":
         """
         Создаёт суперпользователя для администрирования.
         Обязательно с паролем, обязательно с правами админки.
@@ -110,8 +120,8 @@ class User(AbstractBaseUser, PermissionsMixin):
             return f"{self.phone} ({self.first_name} {self.last_name})".strip()
         return self.phone
 
-    def get_full_name(self):
+    def get_full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
 
-    def get_short_name(self):
+    def get_short_name(self) -> str:
         return self.first_name or self.phone

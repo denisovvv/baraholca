@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db.models import Case, DecimalField, F, When
+from django.db.models import Case, DecimalField, F, QuerySet, When
 from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, BasePermission
@@ -32,7 +32,7 @@ class CategoryListView(generics.ListAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None  # категорий немного, пагинация не нужна
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Category]:
         return Category.objects.filter(
             is_active=True,
         ).order_by("order", "name")
@@ -47,7 +47,7 @@ class WarehouseListView(generics.ListAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None  # складов немного
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Warehouse]:
         """Активные склады, отсортированные по имени."""
         return (
             Warehouse.objects.filter(
@@ -67,7 +67,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     lookup_field = "id"
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Product]:
         """
         Только товары, видимые в каталоге.
         """
@@ -99,7 +99,7 @@ class ProductListView(generics.ListAPIView):
     ordering_fields: ClassVar[list[str]] = ["effective_price_anno", "name_short"]
     ordering: ClassVar[list[str]] = ["name_short"]  # сортировка по умолчанию
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Product]:
         """
         Товары, видимые в каталоге, с аннотацией эффективной цены.
         """
@@ -134,7 +134,7 @@ class WarehouseNearbyView(generics.ListAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Warehouse]:
         lat = self.request.query_params.get("lat")
         lon = self.request.query_params.get("lon")
 
@@ -179,7 +179,7 @@ class CategoryTreeView(generics.ListAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
     pagination_class = None
 
-    def get_queryset(self):
+    def get_queryset(self) -> QuerySet[Category]:
         return Category.objects.filter(
             is_active=True,
             parent__isnull=True,

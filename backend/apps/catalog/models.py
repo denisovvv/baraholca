@@ -1,4 +1,5 @@
-from typing import ClassVar
+from decimal import Decimal
+from typing import Any, ClassVar
 
 from django.contrib.gis.db import models as gis_models
 from django.core.exceptions import ValidationError
@@ -53,13 +54,13 @@ class Category(models.Model):
     def __str__(self) -> str:
         return self.get_full_path()
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         # Автогенерация slug, если не заполнен
         if not self.slug:
             self.slug = slugify(self.name, allow_unicode=True)
         super().save(*args, **kwargs)
 
-    def get_full_path(self):
+    def get_full_path(self) -> str:
         """
         Возвращает полный путь категории через все родительские.
         Например: 'Одежда / Мужская / Куртки'
@@ -68,7 +69,7 @@ class Category(models.Model):
             return f"{self.parent.get_full_path()} / {self.name}"
         return self.name
 
-    def get_level(self):
+    def get_level(self) -> int:
         """
         Возвращает уровень вложенности категории (0 для корневых).
         """
@@ -76,7 +77,7 @@ class Category(models.Model):
             return self.parent.get_level() + 1
         return 0
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Валидация на уровне модели:
         - Запрещаем глубину вложенности больше 3 уровней
@@ -287,7 +288,7 @@ class Product(models.Model):
     def __str__(self) -> str:
         return self.name_short
 
-    def get_effective_price(self):
+    def get_effective_price(self) -> Decimal:
         """
         Возвращает актуальную цену для покупателя.
         Если задана скидочная — её, иначе базовую.
@@ -296,13 +297,13 @@ class Product(models.Model):
             return self.discount_price
         return self.base_price
 
-    def is_visible_in_catalog(self):
+    def is_visible_in_catalog(self) -> bool:
         """
         Проверяет, виден ли товар в каталоге для покупателей.
         """
         return self.is_active and self.is_available_for_sale and self.seller.is_active
 
-    def has_stock(self):
+    def has_stock(self) -> bool:
         """
         Проверяет, есть ли товар в наличии хотя бы на одном складе.
         Для товаров «под заказ» всегда True (они не имеют остатков).
@@ -312,7 +313,7 @@ class Product(models.Model):
 
         return self.stocks.filter(quantity__gt=models.F("reserved_quantity")).exists()
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Валидация бизнес-логики:
         - У товара «под заказ» обязательно должно быть время изготовления
@@ -363,7 +364,7 @@ class ProductImage(models.Model):
     def __str__(self) -> str:
         return f"Фото {self.product.name_short} ({'главное' if self.is_main else 'доп.'})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args: Any, **kwargs: Any) -> None:
         """
         Если это фото отмечается как главное — сбрасываем флаг у всех остальных фото товара.
         Это гарантирует, что у одного товара только одно главное фото.
@@ -420,14 +421,14 @@ class ProductStock(models.Model):
         return f"{self.product.name_short} → {self.warehouse.name}: {self.quantity} шт."
 
     @property
-    def available_quantity(self):
+    def available_quantity(self) -> int:
         """
         Доступное к покупке количество.
         Это quantity минус то, что уже в активных резервах.
         """
         return max(0, self.quantity - self.reserved_quantity)
 
-    def clean(self):
+    def clean(self) -> None:
         """
         Валидация:
         - quantity не может быть отрицательным

@@ -3,7 +3,8 @@
 """
 
 import json
-from typing import ClassVar
+from collections.abc import Mapping
+from typing import Any, ClassVar
 
 from django import forms
 
@@ -32,10 +33,15 @@ class WorkingHoursWidget(forms.Widget):
 
     template_name = "admin/widgets/working_hours.html"
 
-    def __init__(self, attrs=None) -> None:
+    def __init__(self, attrs: dict[str, Any] | None = None) -> None:
         super().__init__(attrs)
 
-    def value_from_datadict(self, data, files, name):
+    def value_from_datadict(
+        self,
+        data: Mapping[str, Any],
+        files: Mapping[str, Any] | None,
+        name: str,
+    ) -> str:
         """
         Вызывается при сохранении формы — собирает данные обратно в JSON.
         """
@@ -53,7 +59,12 @@ class WorkingHoursWidget(forms.Widget):
                 result[day_key] = None
         return json.dumps(result, ensure_ascii=False)
 
-    def get_context(self, name, value, attrs):
+    def get_context(
+        self,
+        name: str,
+        value: Any,
+        attrs: dict[str, Any] | None,
+    ) -> dict[str, Any]:
         """
         Готовит данные для отображения в шаблоне.
         """
@@ -98,11 +109,11 @@ class WorkingHoursFormField(forms.CharField):
 
     widget = WorkingHoursWidget
 
-    def __init__(self, *args, **kwargs) -> None:
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         kwargs.setdefault("required", False)
         super().__init__(*args, **kwargs)
 
-    def to_python(self, value):
+    def to_python(self, value: Any) -> dict[str, Any] | list[Any] | None:
         """
         Возвращает Python-объект из строки JSON.
         Django при сохранении в JSONField сам поймёт что это dict.
@@ -157,7 +168,7 @@ class ApplyDiscountForm(forms.Form):
         help_text="Например: 100 = скидка 100 рублей от базовой цены",
     )
 
-    def clean(self):
+    def clean(self) -> dict[str, Any]:
         """
         Проверка: должно быть заполнено одно из полей в зависимости от типа.
         """

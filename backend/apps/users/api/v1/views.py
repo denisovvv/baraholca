@@ -6,6 +6,7 @@ from typing import ClassVar
 
 from rest_framework import status
 from rest_framework.permissions import AllowAny, BasePermission
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -45,7 +46,7 @@ class SmsRequestView(APIView):
 
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         serializer = PhoneRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data["phone"]
@@ -108,7 +109,7 @@ class SmsVerifyView(APIView):
 
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
 
-    def post(self, request):
+    def post(self, request: Request) -> Response:
         serializer = SmsVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         phone = serializer.validated_data["phone"]

@@ -9,6 +9,7 @@ import re
 import secrets
 
 from django.core.cache import cache
+from django.http import HttpRequest
 from rest_framework.exceptions import ValidationError
 
 # Время жизни кода
@@ -103,7 +104,7 @@ def increment_rate_ip(ip: str) -> None:
         cache.incr(key)
 
 
-def get_client_ip(request) -> str:
+def get_client_ip(request: HttpRequest) -> str:
     """
     Извлекает IP-адрес клиента из запроса.
     """

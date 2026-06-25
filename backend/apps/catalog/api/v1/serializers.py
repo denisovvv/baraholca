@@ -2,7 +2,7 @@
 Сериализаторы для API каталога: категории, склады, товары.
 """
 
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from rest_framework import serializers
 
@@ -43,7 +43,7 @@ class CategorySerializer(serializers.ModelSerializer):
             "order",
         ]
 
-    def get_full_path(self, obj):
+    def get_full_path(self, obj: Category) -> str:
         return obj.get_full_path()
 
 
@@ -64,7 +64,7 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
             "children",
         ]
 
-    def get_children(self, obj):
+    def get_children(self, obj: Category) -> list[dict[str, Any]]:
         """
         Рекурсивно сериализует активные дочерние категории.
         """
@@ -101,11 +101,11 @@ class WarehouseListSerializer(serializers.ModelSerializer):
             "pickup_available",
         ]
 
-    def get_latitude(self, obj):
+    def get_latitude(self, obj: Warehouse) -> float | None:
         """Широта."""
         return obj.location.y if obj.location else None
 
-    def get_longitude(self, obj):
+    def get_longitude(self, obj: Warehouse) -> float | None:
         """Долгота."""
         return obj.location.x if obj.location else None
 
@@ -132,7 +132,7 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
     class Meta(WarehouseListSerializer.Meta):
         fields: ClassVar[list[str]] = WarehouseListSerializer.Meta.fields + ["distance_km"]
 
-    def get_distance_km(self, obj):
+    def get_distance_km(self, obj: Warehouse) -> float | None:
         """
         Расстояние до склада в километрах, округлённое до 1 знака.
         """
@@ -162,7 +162,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
             "is_main",
         ]
 
-    def get_image_url(self, obj):
+    def get_image_url(self, obj: ProductImage) -> str | None:
         """Полный URL изображения с учётом домена."""
         request = self.context.get("request")
         if not obj.image:
@@ -200,7 +200,7 @@ class ProductStockSerializer(serializers.ModelSerializer):
             "available",
         ]
 
-    def get_available(self, obj):
+    def get_available(self, obj: ProductStock) -> bool:
         return obj.available_quantity > 0
 
 
@@ -245,7 +245,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "product_type",
         ]
 
-    def get_main_image_url(self, obj):
+    def get_main_image_url(self, obj: Product) -> str | None:
         """
         URL главного фото товара.
         """

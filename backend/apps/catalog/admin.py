@@ -1,9 +1,12 @@
 from decimal import Decimal
-from typing import ClassVar
+from typing import Any, ClassVar
 
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.gis.admin import GISModelAdmin
-from django.http import HttpResponseRedirect
+from django.db import models
+from django.db.models import QuerySet
+from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 
 from apps.catalog.forms import ApplyDiscountForm, WorkingHoursFormField
@@ -27,13 +30,19 @@ class CategoryAdmin(admin.ModelAdmin):
     )
     readonly_fields = ("created_at", "updated_at")
 
-    def get_full_path(self, obj):
+    def get_full_path(self, obj: Category) -> str:
         return obj.get_full_path()
 
     get_full_path.short_description = "Категория"
     get_full_path.admin_order_field = "name"
 
-    def save_model(self, request, obj, form, change):
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Category,
+        form: forms.ModelForm,
+        change: bool,
+    ) -> None:
         """
         Перед сохранением вызываем full_clean(), чтобы сработала валидация модели.
         """
@@ -52,7 +61,12 @@ class WarehouseAdmin(GISModelAdmin):
         css: ClassVar[dict[str, tuple[str, ...]]] = {"all": ("admin/css/gis_map_fix.css",)}
 
     # Начальный вид карты — центр между Воронежем и Белгородом
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
+    def formfield_for_dbfield(
+        self,
+        db_field: models.Field,
+        request: HttpRequest,
+        **kwargs: Any,
+    ) -> forms.Field | None:
         """
         Подменяем стандартное JSON-поле working_hours на наш кастомный виджет.
         """
@@ -118,7 +132,7 @@ class ProductStockInline(admin.TabularInline):
     readonly_fields = ("available_quantity_display", "updated_at")
     autocomplete_fields = ("warehouse",)
 
-    def available_quantity_display(self, obj):
+    def available_quantity_display(self, obj: ProductStock) -> str:
         if obj.pk is None:
             return "—"
         return f"{obj.available_quantity} шт."
@@ -221,7 +235,7 @@ class ProductAdmin(admin.ModelAdmin):
         ),
     )
 
-    def get_effective_price_display(self, obj):
+    def get_effective_price_display(self, obj: Product) -> str:
         """
         Отображение актуальной цены в списке и в форме.
         """
@@ -234,7 +248,13 @@ class ProductAdmin(admin.ModelAdmin):
 
     get_effective_price_display.short_description = "Актуальная цена"
 
-    def save_model(self, request, obj, form, change):
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: Product,
+        form: forms.ModelForm,
+        change: bool,
+    ) -> None:
         """
         Перед сохранением вызываем full_clean(), чтобы сработала валидация модели.
         """
@@ -243,7 +263,11 @@ class ProductAdmin(admin.ModelAdmin):
 
     actions: ClassVar[list[str]] = ["apply_discount_action"]
 
-    def apply_discount_action(self, request, queryset):
+    def apply_discount_action(
+        self,
+        request: HttpRequest,
+        queryset: QuerySet[Product],
+    ) -> HttpResponse:
         """
         Admin action для массового применения скидки к выбранным товарам.
         """
@@ -347,12 +371,18 @@ class ProductStockAdmin(admin.ModelAdmin):
     autocomplete_fields = ("product", "warehouse")
     readonly_fields = ("updated_at",)
 
-    def available_quantity_display(self, obj):
+    def available_quantity_display(self, obj: ProductStock) -> str:
         return f"{obj.available_quantity} шт."
 
     available_quantity_display.short_description = "Доступно"
 
-    def save_model(self, request, obj, form, change):
+    def save_model(
+        self,
+        request: HttpRequest,
+        obj: ProductStock,
+        form: forms.ModelForm,
+        change: bool,
+    ) -> None:
         """
         Валидация на сохранение (проверка отрицательных значений и т.д.).
         """
