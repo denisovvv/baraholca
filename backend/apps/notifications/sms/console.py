@@ -18,17 +18,15 @@ class ConsoleSmsProvider(SmsProvider):
         """
         Имитирует отправку SMS
         """
-        message = f'[SMS DEV] To: {phone}, Code: {code}'
+        message = f"[SMS DEV] To: {phone}, Code: {code}"
 
         # В консоль терминала где работает runserver
-        print('=' * 60)
+        print("=" * 60)
         print(message)
-        print('=' * 60)
-
+        print("=" * 60)
 
         logger.warning(
-            'ConsoleSmsProvider used to send SMS to %s. '
-            'This should never happen in production.',
+            "ConsoleSmsProvider used to send SMS to %s. This should never happen in production.",
             phone,
         )
 

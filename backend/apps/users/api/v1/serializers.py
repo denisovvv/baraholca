@@ -19,16 +19,16 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'id',
-            'phone',
-            'first_name',
-            'last_name',
-            'phone_verified',
+            "id",
+            "phone",
+            "first_name",
+            "last_name",
+            "phone_verified",
         ]
         read_only_fields = [
-            'id',
-            'phone',
-            'phone_verified',
+            "id",
+            "phone",
+            "phone_verified",
         ]
 
 
@@ -40,8 +40,8 @@ class UserUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'first_name',
-            'last_name',
+            "first_name",
+            "last_name",
         ]
 
 
@@ -69,5 +69,5 @@ class SmsVerifySerializer(serializers.Serializer):
 
     def validate_code(self, value: str) -> str:
         if not value.isdigit():
-            raise serializers.ValidationError('Код должен состоять из цифр')
+            raise serializers.ValidationError("Код должен состоять из цифр")
         return value

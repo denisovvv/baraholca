@@ -15,12 +15,12 @@ from rest_framework.exceptions import ValidationError
 SMS_CODE_TTL = 300  # 5 минут
 
 # Rate limiting — по номеру телефона
-SMS_RATE_PHONE_TTL = 60   # окно 60 секунд
+SMS_RATE_PHONE_TTL = 60  # окно 60 секунд
 SMS_RATE_PHONE_LIMIT = 1  # не более 1 запроса в окне
 
 # Rate limiting — по IP-адресу
-SMS_RATE_IP_TTL = 3600   # окно 1 час
-SMS_RATE_IP_LIMIT = 5    # не более 5 запросов в окне
+SMS_RATE_IP_TTL = 3600  # окно 1 час
+SMS_RATE_IP_LIMIT = 5  # не более 5 запросов в окне
 
 
 def generate_sms_code() -> str:
@@ -31,15 +31,15 @@ def generate_sms_code() -> str:
 
 
 def _phone_code_key(phone: str) -> str:
-    return f'sms_code:{phone}'
+    return f"sms_code:{phone}"
 
 
 def _rate_phone_key(phone: str) -> str:
-    return f'sms_rate_phone:{phone}'
+    return f"sms_rate_phone:{phone}"
 
 
 def _rate_ip_key(ip: str) -> str:
-    return f'sms_rate_ip:{ip}'
+    return f"sms_rate_ip:{ip}"
 
 
 def save_sms_code(phone: str, code: str) -> None:
@@ -107,18 +107,19 @@ def get_client_ip(request) -> str:
     """
     Извлекает IP-адрес клиента из запроса.
     """
-    forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    forwarded_for = request.META.get("HTTP_X_FORWARDED_FOR")
     if forwarded_for:
         # X-Forwarded-For может содержать цепочку IP: "client, proxy1, proxy2"
         # Берём первый — это реальный клиент
-        return forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '0.0.0.0')
+        return forwarded_for.split(",")[0].strip()
+    return request.META.get("REMOTE_ADDR", "0.0.0.0")
+
 
 SMS_MAX_ATTEMPTS = 5
 
 
 def _attempts_key(phone: str) -> str:
-    return f'sms_attempts:{phone}'
+    return f"sms_attempts:{phone}"
 
 
 def get_attempts(phone: str) -> int:
@@ -139,17 +140,16 @@ def increment_attempts(phone: str) -> int:
 def reset_attempts(phone: str) -> None:
     cache.delete(_attempts_key(phone))
 
+
 def normalize_phone(value: str) -> str:
     """
     Нормализует номер телефона к формату +7XXXXXXXXXX.
     """
-    digits = re.sub(r'\D', '', value)
+    digits = re.sub(r"\D", "", value)
 
-    if len(digits) == 11 and digits[0] in ('7', '8'):
-        digits = '7' + digits[1:]
+    if len(digits) == 11 and digits[0] in ("7", "8"):
+        digits = "7" + digits[1:]
     else:
-        raise ValidationError(
-            'Введите корректный номер телефона в формате +7XXXXXXXXXX'
-        )
+        raise ValidationError("Введите корректный номер телефона в формате +7XXXXXXXXXX")
 
-    return '+' + digits
+    return "+" + digits

@@ -16,13 +16,14 @@ from apps.catalog.models import (
 # Category
 # ============================================================================
 
+
 class CategorySerializer(serializers.ModelSerializer):
     """
     Базовое представление категории.
     """
 
     parent_name = serializers.CharField(
-        source='parent.name',
+        source="parent.name",
         read_only=True,
         allow_null=True,
     )
@@ -31,17 +32,18 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id',
-            'name',
-            'slug',
-            'parent',
-            'parent_name',
-            'full_path',
-            'order',
+            "id",
+            "name",
+            "slug",
+            "parent",
+            "parent_name",
+            "full_path",
+            "order",
         ]
 
     def get_full_path(self, obj):
         return obj.get_full_path()
+
 
 class CategoryTreeSerializer(serializers.ModelSerializer):
     """
@@ -53,18 +55,18 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Category
         fields = [
-            'id',
-            'name',
-            'slug',
-            'order',
-            'children',
+            "id",
+            "name",
+            "slug",
+            "order",
+            "children",
         ]
 
     def get_children(self, obj):
         """
         Рекурсивно сериализует активные дочерние категории.
         """
-        children = obj.children.filter(is_active=True).order_by('order', 'name')
+        children = obj.children.filter(is_active=True).order_by("order", "name")
         return CategoryTreeSerializer(children, many=True).data
 
 
@@ -72,13 +74,14 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
 # Warehouse
 # ============================================================================
 
+
 class WarehouseListSerializer(serializers.ModelSerializer):
     """
     Короткое представление склада для списков.
     """
 
     seller_name = serializers.CharField(
-        source='seller.short_name',
+        source="seller.short_name",
         read_only=True,
     )
     latitude = serializers.SerializerMethodField()
@@ -87,13 +90,13 @@ class WarehouseListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Warehouse
         fields = [
-            'id',
-            'name',
-            'seller_name',
-            'address',
-            'latitude',
-            'longitude',
-            'pickup_available',
+            "id",
+            "name",
+            "seller_name",
+            "address",
+            "latitude",
+            "longitude",
+            "pickup_available",
         ]
 
     def get_latitude(self, obj):
@@ -112,9 +115,10 @@ class WarehouseDetailSerializer(WarehouseListSerializer):
 
     class Meta(WarehouseListSerializer.Meta):
         fields = WarehouseListSerializer.Meta.fields + [
-            'contact_phone',
-            'working_hours',
+            "contact_phone",
+            "working_hours",
         ]
+
 
 class WarehouseNearbySerializer(WarehouseListSerializer):
     """
@@ -124,19 +128,21 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
     distance_km = serializers.SerializerMethodField()
 
     class Meta(WarehouseListSerializer.Meta):
-        fields = WarehouseListSerializer.Meta.fields + ['distance_km']
+        fields = WarehouseListSerializer.Meta.fields + ["distance_km"]
 
     def get_distance_km(self, obj):
         """
         Расстояние до склада в километрах, округлённое до 1 знака.
         """
-        if hasattr(obj, 'distance') and obj.distance is not None:
+        if hasattr(obj, "distance") and obj.distance is not None:
             return round(obj.distance.km, 1)
         return None
+
 
 # ============================================================================
 # ProductImage
 # ============================================================================
+
 
 class ProductImageSerializer(serializers.ModelSerializer):
     """
@@ -148,15 +154,15 @@ class ProductImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductImage
         fields = [
-            'id',
-            'image_url',
-            'order',
-            'is_main',
+            "id",
+            "image_url",
+            "order",
+            "is_main",
         ]
 
     def get_image_url(self, obj):
         """Полный URL изображения с учётом домена."""
-        request = self.context.get('request')
+        request = self.context.get("request")
         if not obj.image:
             return None
         if request:
@@ -168,17 +174,18 @@ class ProductImageSerializer(serializers.ModelSerializer):
 # ProductStock
 # ============================================================================
 
+
 class ProductStockSerializer(serializers.ModelSerializer):
     """
     Остатки товара по складам.
     """
 
     warehouse_name = serializers.CharField(
-        source='warehouse.name',
+        source="warehouse.name",
         read_only=True,
     )
     warehouse_address = serializers.CharField(
-        source='warehouse.address',
+        source="warehouse.address",
         read_only=True,
     )
     available = serializers.SerializerMethodField()
@@ -186,9 +193,9 @@ class ProductStockSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductStock
         fields = [
-            'warehouse_name',
-            'warehouse_address',
-            'available',
+            "warehouse_name",
+            "warehouse_address",
+            "available",
         ]
 
     def get_available(self, obj):
@@ -199,23 +206,24 @@ class ProductStockSerializer(serializers.ModelSerializer):
 # Product
 # ============================================================================
 
+
 class ProductListSerializer(serializers.ModelSerializer):
     """
     Короткое представление товара для списков и каталога.
     """
 
     seller_name = serializers.CharField(
-        source='seller.short_name',
+        source="seller.short_name",
         read_only=True,
     )
     category_name = serializers.CharField(
-        source='category.name',
+        source="category.name",
         read_only=True,
         allow_null=True,
     )
     main_image_url = serializers.SerializerMethodField()
     effective_price = serializers.DecimalField(
-        source='get_effective_price',
+        source="get_effective_price",
         max_digits=12,
         decimal_places=2,
         read_only=True,
@@ -224,15 +232,15 @@ class ProductListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = [
-            'id',
-            'name_short',
-            'seller_name',
-            'category_name',
-            'main_image_url',
-            'base_price',
-            'discount_price',
-            'effective_price',
-            'product_type',
+            "id",
+            "name_short",
+            "seller_name",
+            "category_name",
+            "main_image_url",
+            "base_price",
+            "discount_price",
+            "effective_price",
+            "product_type",
         ]
 
     def get_main_image_url(self, obj):
@@ -245,7 +253,7 @@ class ProductListSerializer(serializers.ModelSerializer):
         if not main:
             return None
 
-        request = self.context.get('request')
+        request = self.context.get("request")
         if request:
             return request.build_absolute_uri(main.image.url)
         return main.image.url
@@ -261,9 +269,9 @@ class ProductDetailSerializer(ProductListSerializer):
 
     class Meta(ProductListSerializer.Meta):
         fields = ProductListSerializer.Meta.fields + [
-            'name_full',
-            'description',
-            'production_time_days',
-            'images',
-            'stocks',
+            "name_full",
+            "description",
+            "production_time_days",
+            "images",
+            "stocks",
         ]

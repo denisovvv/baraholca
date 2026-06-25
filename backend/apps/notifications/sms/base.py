@@ -36,4 +36,5 @@ class SmsProviderError(Exception):
     (например, SmsAeroAuthError, SmsAeroQuotaError), а вызывающий
     код может ловить либо конкретное, либо базовое.
     """
+
     pass

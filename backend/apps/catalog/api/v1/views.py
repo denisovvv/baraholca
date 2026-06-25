@@ -33,7 +33,8 @@ class CategoryListView(generics.ListAPIView):
     def get_queryset(self):
         return Category.objects.filter(
             is_active=True,
-        ).order_by('order', 'name')
+        ).order_by("order", "name")
+
 
 class WarehouseListView(generics.ListAPIView):
     """
@@ -46,9 +47,14 @@ class WarehouseListView(generics.ListAPIView):
 
     def get_queryset(self):
         """Активные склады, отсортированные по имени."""
-        return Warehouse.objects.filter(
-            is_active=True,
-        ).select_related('seller').order_by('name')
+        return (
+            Warehouse.objects.filter(
+                is_active=True,
+            )
+            .select_related("seller")
+            .order_by("name")
+        )
+
 
 class ProductDetailView(generics.RetrieveAPIView):
     """
@@ -57,22 +63,27 @@ class ProductDetailView(generics.RetrieveAPIView):
 
     serializer_class = ProductDetailSerializer
     permission_classes = [AllowAny]
-    lookup_field = 'id'
+    lookup_field = "id"
 
     def get_queryset(self):
         """
         Только товары, видимые в каталоге.
         """
-        return Product.objects.filter(
-            is_active=True,
-            is_available_for_sale=True,
-        ).select_related(
-            'seller',
-            'category',
-        ).prefetch_related(
-            'images',
-            'stocks__warehouse',
+        return (
+            Product.objects.filter(
+                is_active=True,
+                is_available_for_sale=True,
+            )
+            .select_related(
+                "seller",
+                "category",
+            )
+            .prefetch_related(
+                "images",
+                "stocks__warehouse",
+            )
         )
+
 
 class ProductListView(generics.ListAPIView):
     """
@@ -82,29 +93,35 @@ class ProductListView(generics.ListAPIView):
     serializer_class = ProductListSerializer
     permission_classes = [AllowAny]
     filterset_class = ProductFilter
-    search_fields = ['name_short', 'name_full']
-    ordering_fields = ['effective_price_anno', 'name_short']
-    ordering = ['name_short']  # сортировка по умолчанию
+    search_fields = ["name_short", "name_full"]
+    ordering_fields = ["effective_price_anno", "name_short"]
+    ordering = ["name_short"]  # сортировка по умолчанию
 
     def get_queryset(self):
         """
         Товары, видимые в каталоге, с аннотацией эффективной цены.
         """
-        return Product.objects.filter(
-            is_active=True,
-            is_available_for_sale=True,
-        ).select_related(
-            'seller',
-            'category',
-        ).prefetch_related(
-            'images',
-        ).annotate(
-            effective_price_anno=Case(
-                When(discount_price__isnull=False, then=F('discount_price')),
-                default=F('base_price'),
-                output_field=DecimalField(max_digits=12, decimal_places=2),
+        return (
+            Product.objects.filter(
+                is_active=True,
+                is_available_for_sale=True,
+            )
+            .select_related(
+                "seller",
+                "category",
+            )
+            .prefetch_related(
+                "images",
+            )
+            .annotate(
+                effective_price_anno=Case(
+                    When(discount_price__isnull=False, then=F("discount_price")),
+                    default=F("base_price"),
+                    output_field=DecimalField(max_digits=12, decimal_places=2),
+                )
             )
         )
+
 
 class WarehouseNearbyView(generics.ListAPIView):
     """
@@ -116,37 +133,40 @@ class WarehouseNearbyView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self):
-        lat = self.request.query_params.get('lat')
-        lon = self.request.query_params.get('lon')
+        lat = self.request.query_params.get("lat")
+        lon = self.request.query_params.get("lon")
 
         # Проверяем, что координаты переданы
         if lat is None or lon is None:
-            raise ValidationError(
-                'Укажите координаты: ?lat=<широта>&lon=<долгота>'
-            )
+            raise ValidationError("Укажите координаты: ?lat=<широта>&lon=<долгота>")
 
         # Проверяем, что координаты — числа в допустимом диапазоне
         try:
             lat = float(lat)
             lon = float(lon)
         except ValueError:
-            raise ValidationError('Координаты должны быть числами')
+            raise ValidationError("Координаты должны быть числами")
 
         if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
             raise ValidationError(
-                'Координаты вне допустимого диапазона '
-                '(широта -90..90, долгота -180..180)'
+                "Координаты вне допустимого диапазона (широта -90..90, долгота -180..180)"
             )
 
         # Точка покупателя. ВАЖНО: Point(долгота, широта) — x, y
         user_location = Point(lon, lat, srid=4326)
 
         # Аннотируем расстояние и сортируем по нему
-        return Warehouse.objects.filter(
-            is_active=True,
-        ).annotate(
-            distance=Distance('location', user_location),
-        ).select_related('seller').order_by('distance')
+        return (
+            Warehouse.objects.filter(
+                is_active=True,
+            )
+            .annotate(
+                distance=Distance("location", user_location),
+            )
+            .select_related("seller")
+            .order_by("distance")
+        )
+
 
 class CategoryTreeView(generics.ListAPIView):
     """
@@ -161,4 +181,4 @@ class CategoryTreeView(generics.ListAPIView):
         return Category.objects.filter(
             is_active=True,
             parent__isnull=True,
-        ).order_by('order', 'name')
+        ).order_by("order", "name")

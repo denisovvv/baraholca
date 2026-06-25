@@ -46,15 +46,14 @@ class SmsRequestView(APIView):
     def post(self, request):
         serializer = PhoneRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone = serializer.validated_data['phone']
+        phone = serializer.validated_data["phone"]
 
         client_ip = get_client_ip(request)
         if is_rate_limited_by_ip(client_ip):
             return Response(
                 {
-                    'detail': 'Слишком много запросов с вашего адреса. '
-                              'Попробуйте позже.',
-                    'retry_after': SMS_RATE_IP_TTL,
+                    "detail": "Слишком много запросов с вашего адреса. Попробуйте позже.",
+                    "retry_after": SMS_RATE_IP_TTL,
                 },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
@@ -62,9 +61,8 @@ class SmsRequestView(APIView):
         if is_rate_limited_by_phone(phone):
             return Response(
                 {
-                    'detail': 'Код уже был отправлен. '
-                              'Повторный запрос возможен через минуту.',
-                    'retry_after': SMS_RATE_PHONE_TTL,
+                    "detail": "Код уже был отправлен. Повторный запрос возможен через минуту.",
+                    "retry_after": SMS_RATE_PHONE_TTL,
                 },
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
@@ -78,13 +76,13 @@ class SmsRequestView(APIView):
         except SmsProviderError:
             # Провайдер недоступен — не штрафуем пользователя rate limit'ом
             return Response(
-                {'detail': 'Не удалось отправить SMS. Попробуйте позже.'},
+                {"detail": "Не удалось отправить SMS. Попробуйте позже."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
         if not sent:
             return Response(
-                {'detail': 'Не удалось отправить SMS. Попробуйте позже.'},
+                {"detail": "Не удалось отправить SMS. Попробуйте позже."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
 
@@ -94,11 +92,12 @@ class SmsRequestView(APIView):
 
         return Response(
             {
-                'status': 'sent',
-                'expires_in': SMS_CODE_TTL,
+                "status": "sent",
+                "expires_in": SMS_CODE_TTL,
             },
             status=status.HTTP_200_OK,
         )
+
 
 class SmsVerifyView(APIView):
     """
@@ -110,14 +109,14 @@ class SmsVerifyView(APIView):
     def post(self, request):
         serializer = SmsVerifySerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        phone = serializer.validated_data['phone']
-        code = serializer.validated_data['code']
+        phone = serializer.validated_data["phone"]
+        code = serializer.validated_data["code"]
 
         stored_code = get_sms_code(phone)
         if stored_code is None:
             # Кода нет: не запрашивали, истёк, или уже исчерпали попытки
             return Response(
-                {'detail': 'Код недействителен. Запросите новый.'},
+                {"detail": "Код недействителен. Запросите новый."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -127,7 +126,7 @@ class SmsVerifyView(APIView):
             delete_sms_code(phone)
             reset_attempts(phone)
             return Response(
-                {'detail': 'Слишком много попыток. Запросите новый код.'},
+                {"detail": "Слишком много попыток. Запросите новый код."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
@@ -140,24 +139,24 @@ class SmsVerifyView(APIView):
                 delete_sms_code(phone)
                 reset_attempts(phone)
                 return Response(
-                    {'detail': 'Слишком много попыток. Запросите новый код.'},
+                    {"detail": "Слишком много попыток. Запросите новый код."},
                     status=status.HTTP_401_UNAUTHORIZED,
                 )
 
             return Response(
-                {'detail': f'Неверный код. Осталось попыток: {remaining}'},
+                {"detail": f"Неверный код. Осталось попыток: {remaining}"},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
         user, is_new_user = User.objects.get_or_create(
             phone=phone,
-            defaults={'phone_verified': True},
+            defaults={"phone_verified": True},
         )
 
         # Если пользователь уже был, но номер не был подтверждён — подтверждаем
         if not user.phone_verified:
             user.phone_verified = True
-            user.save(update_fields=['phone_verified'])
+            user.save(update_fields=["phone_verified"])
 
         delete_sms_code(phone)
         reset_attempts(phone)
@@ -166,10 +165,10 @@ class SmsVerifyView(APIView):
 
         return Response(
             {
-                'access': str(refresh.access_token),
-                'refresh': str(refresh),
-                'user': UserSerializer(user).data,
-                'is_new_user': is_new_user,
+                "access": str(refresh.access_token),
+                "refresh": str(refresh),
+                "user": UserSerializer(user).data,
+                "is_new_user": is_new_user,
             },
             status=status.HTTP_200_OK,
         )

@@ -13,14 +13,14 @@ class ProductFilter(django_filters.FilterSet):
     """
 
     price_min = django_filters.NumberFilter(
-        field_name='effective_price_anno',
-        lookup_expr='gte',
+        field_name="effective_price_anno",
+        lookup_expr="gte",
     )
     price_max = django_filters.NumberFilter(
-        field_name='effective_price_anno',
-        lookup_expr='lte',
+        field_name="effective_price_anno",
+        lookup_expr="lte",
     )
 
     class Meta:
         model = Product
-        fields = ['category', 'seller']
+        fields = ["category", "seller"]
