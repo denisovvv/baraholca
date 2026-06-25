@@ -32,7 +32,7 @@ class WorkingHoursWidget(forms.Widget):
 
     template_name = "admin/widgets/working_hours.html"
 
-    def __init__(self, attrs=None):
+    def __init__(self, attrs=None) -> None:
         super().__init__(attrs)
 
     def value_from_datadict(self, data, files, name):
@@ -98,7 +98,7 @@ class WorkingHoursFormField(forms.CharField):
 
     widget = WorkingHoursWidget
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kwargs) -> None:
         kwargs.setdefault("required", False)
         super().__init__(*args, **kwargs)
 

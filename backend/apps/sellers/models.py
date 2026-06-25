@@ -57,7 +57,7 @@ class Seller(models.Model):
         verbose_name_plural = "Продавцы"
         ordering: ClassVar[list[str]] = ["name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.short_name or self.name
 
 
@@ -96,5 +96,5 @@ class SellerStaff(models.Model):
             models.UniqueConstraint(fields=["user", "seller"], name="unique_user_seller_role")
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user} → {self.seller} ({self.get_role_display()})"

@@ -50,7 +50,7 @@ class Category(models.Model):
         verbose_name_plural = "Категории"
         ordering: ClassVar[list[str]] = ["order", "name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.get_full_path()
 
     def save(self, *args, **kwargs):
@@ -177,7 +177,7 @@ class Warehouse(models.Model):
         verbose_name_plural = "Склады"
         ordering: ClassVar[list[str]] = ["seller__name", "name"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.name} ({self.seller.short_name or self.seller.name})"
 
 
@@ -284,7 +284,7 @@ class Product(models.Model):
             models.Index(fields=["is_available_for_sale", "is_active"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name_short
 
     def get_effective_price(self):
@@ -360,7 +360,7 @@ class ProductImage(models.Model):
         verbose_name_plural = "Фотографии товаров"
         ordering: ClassVar[list[str]] = ["-is_main", "order", "created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"Фото {self.product.name_short} ({'главное' if self.is_main else 'доп.'})"
 
     def save(self, *args, **kwargs):
@@ -416,7 +416,7 @@ class ProductStock(models.Model):
             models.Index(fields=["product", "warehouse"]),
         ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.product.name_short} → {self.warehouse.name}: {self.quantity} шт."
 
     @property

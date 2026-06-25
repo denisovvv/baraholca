@@ -105,7 +105,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name_plural = "Пользователи"
         ordering: ClassVar[list[str]] = ["-date_joined"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.first_name or self.last_name:
             return f"{self.phone} ({self.first_name} {self.last_name})".strip()
         return self.phone
