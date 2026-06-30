@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from decimal import Decimal
 from typing import Any, ClassVar
 
@@ -19,7 +20,7 @@ class CategoryAdmin(admin.ModelAdmin):
     list_filter = ("is_active",)
     search_fields = ("name", "slug", "description")
     list_editable = ("order", "is_active")
-    prepopulated_fields: ClassVar[dict[str, tuple[str, ...]]] = {"slug": ("name",)}
+    prepopulated_fields: ClassVar[dict[str, Sequence[str]]] = {"slug": ("name",)}
     autocomplete_fields = ("parent",)
 
     fieldsets = (
@@ -33,8 +34,8 @@ class CategoryAdmin(admin.ModelAdmin):
     def get_full_path(self, obj: Category) -> str:
         return obj.get_full_path()
 
-    get_full_path.short_description = "Категория"
-    get_full_path.admin_order_field = "name"
+    get_full_path.short_description = "Категория"  # type: ignore[attr-defined]
+    get_full_path.admin_order_field = "name"  # type: ignore[attr-defined]
 
     def save_model(
         self,
@@ -58,7 +59,7 @@ class WarehouseAdmin(GISModelAdmin):
     """
 
     class Media:
-        css: ClassVar[dict[str, tuple[str, ...]]] = {"all": ("admin/css/gis_map_fix.css",)}
+        css: ClassVar[dict[str, Sequence[str]]] = {"all": ("admin/css/gis_map_fix.css",)}
 
     # Начальный вид карты — центр между Воронежем и Белгородом
     def formfield_for_dbfield(
@@ -74,7 +75,7 @@ class WarehouseAdmin(GISModelAdmin):
             return WorkingHoursFormField(label=db_field.verbose_name, required=False)
         return super().formfield_for_dbfield(db_field, request, **kwargs)
 
-    gis_widget_kwargs: ClassVar[dict[str, dict[str, float | int]]] = {
+    gis_widget_kwargs: ClassVar[dict[str, dict[str, float | int]]] = {  # type: ignore[misc]
         "attrs": {
             "default_lat": 51.1,
             "default_lon": 37.9,
@@ -139,7 +140,7 @@ class ProductStockInline(admin.TabularInline):
             return "—"
         return f"{obj.available_quantity} шт."
 
-    available_quantity_display.short_description = "Доступно"
+    available_quantity_display.short_description = "Доступно"  # type: ignore[attr-defined]
 
 
 @admin.register(Product)
@@ -154,7 +155,7 @@ class ProductAdmin(admin.ModelAdmin):
     флаг is_active, время изготовления (для made_to_order).
     """
 
-    inlines: ClassVar[list[type[admin.TabularInline]]] = [ProductImageInline, ProductStockInline]
+    inlines: ClassVar[list[type[admin.TabularInline]]] = [ProductImageInline, ProductStockInline]  # type: ignore[assignment]
 
     list_display = (
         "name_short",
@@ -248,7 +249,7 @@ class ProductAdmin(admin.ModelAdmin):
             return f"{price} ₽ (со скидкой)"
         return f"{price} ₽"
 
-    get_effective_price_display.short_description = "Актуальная цена"
+    get_effective_price_display.short_description = "Актуальная цена"  # type: ignore[attr-defined]
 
     def save_model(
         self,
@@ -263,7 +264,7 @@ class ProductAdmin(admin.ModelAdmin):
         obj.full_clean()
         super().save_model(request, obj, form, change)
 
-    actions: ClassVar[list[str]] = ["apply_discount_action"]
+    actions: ClassVar[list[str]] = ["apply_discount_action"]  # type: ignore[misc]
 
     def apply_discount_action(
         self,
@@ -292,9 +293,11 @@ class ProductAdmin(admin.ModelAdmin):
 
                     # Считаем новую цену
                     if discount_type == ApplyDiscountForm.DISCOUNT_TYPE_PERCENT:
+                        assert percent_value is not None  # noqa: S101  # проверено clean()
                         discount_amount = base_price * percent_value / Decimal("100")
                         new_price = base_price - discount_amount
                     else:
+                        assert fixed_value is not None  # noqa: S101  # проверено clean()
                         new_price = base_price - fixed_value
 
                     # Округляем до копеек
@@ -352,7 +355,7 @@ class ProductAdmin(admin.ModelAdmin):
         }
         return render(request, "admin/catalog/apply_discount.html", context)
 
-    apply_discount_action.short_description = "Применить скидку к выбранным товарам"
+    apply_discount_action.short_description = "Применить скидку к выбранным товарам"  # type: ignore[attr-defined]
 
 
 @admin.register(ProductStock)
@@ -379,7 +382,7 @@ class ProductStockAdmin(admin.ModelAdmin):
     def available_quantity_display(self, obj: ProductStock) -> str:
         return f"{obj.available_quantity} шт."
 
-    available_quantity_display.short_description = "Доступно"
+    available_quantity_display.short_description = "Доступно"  # type: ignore[attr-defined]
 
     def save_model(
         self,

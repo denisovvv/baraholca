@@ -92,7 +92,7 @@ class SellerStaff(models.Model):
         verbose_name = "Сотрудник продавца"
         verbose_name_plural = "Сотрудники продавцов"
         ordering: ClassVar[list[str]] = ["-created_at"]
-        constraints: ClassVar[list[models.UniqueConstraint]] = [
+        constraints: ClassVar[list[models.BaseConstraint]] = [
             models.UniqueConstraint(fields=["user", "seller"], name="unique_user_seller_role")
         ]
 

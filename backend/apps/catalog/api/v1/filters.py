@@ -4,12 +4,12 @@
 
 from typing import ClassVar
 
-import django_filters
+import django_filters  # type: ignore[import-untyped]
 
 from apps.catalog.models import Product
 
 
-class ProductFilter(django_filters.FilterSet):
+class ProductFilter(django_filters.FilterSet):  # type: ignore[misc]
     """
     Фильтрация товаров по категории, продавцу и диапазону цен.
     """

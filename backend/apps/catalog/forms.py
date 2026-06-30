@@ -4,7 +4,7 @@
 
 import json
 from collections.abc import Mapping
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from django import forms
 
@@ -45,7 +45,7 @@ class WorkingHoursWidget(forms.Widget):
         """
         Вызывается при сохранении формы — собирает данные обратно в JSON.
         """
-        result = {}
+        result: dict[str, dict[str, str] | None] = {}
         for day_key, _day_label in DAYS_OF_WEEK:
             is_open = data.get(f"{name}_{day_key}_open_flag") == "on"
             if is_open:
@@ -85,14 +85,21 @@ class WorkingHoursWidget(forms.Widget):
         days = []
         for day_key, day_label in DAYS_OF_WEEK:
             day_data = parsed.get(day_key)
-            is_open = day_data is not None and isinstance(day_data, dict)
+            if isinstance(day_data, dict):
+                open_time = day_data.get("open", "09:00")
+                close_time = day_data.get("close", "21:00")
+                is_open = True
+            else:
+                open_time = "09:00"
+                close_time = "21:00"
+                is_open = False
             days.append(
                 {
                     "key": day_key,
                     "label": day_label,
                     "is_open": is_open,
-                    "open_time": day_data.get("open", "09:00") if is_open else "09:00",
-                    "close_time": day_data.get("close", "21:00") if is_open else "21:00",
+                    "open_time": open_time,
+                    "close_time": close_time,
                 }
             )
 
@@ -117,7 +124,7 @@ class WorkingHoursFormField(forms.CharField):
         kwargs.setdefault("required", False)
         super().__init__(*args, **kwargs)
 
-    def to_python(
+    def to_python(  # type: ignore[override]
         self,
         value: Any,  # noqa: ANN401  # Django Field hook: None | str | dict | list из формы или БД
     ) -> dict[str, Any] | list[Any] | None:
@@ -130,7 +137,7 @@ class WorkingHoursFormField(forms.CharField):
         if isinstance(value, (dict, list)):
             return value
         try:
-            return json.loads(value)
+            return cast("dict[str, Any] | list[Any] | None", json.loads(value))
         except (ValueError, TypeError):
             return None
 
@@ -179,7 +186,7 @@ class ApplyDiscountForm(forms.Form):
         """
         Проверка: должно быть заполнено одно из полей в зависимости от типа.
         """
-        cleaned_data = super().clean()
+        cleaned_data = super().clean() or {}
         discount_type = cleaned_data.get("discount_type")
         percent_value = cleaned_data.get("percent_value")
         fixed_value = cleaned_data.get("fixed_value")

@@ -271,7 +271,7 @@ LOGGING = {
 
 # В тестах гасим INFO от apps.* — иначе stderr забивается SMS-кодами.
 if "test" in sys.argv:
-    LOGGING["loggers"]["apps"]["level"] = "WARNING"
+    LOGGING["loggers"]["apps"]["level"] = "WARNING"  # type: ignore[index]
 
 # ============================================================================
 # Security settings for production

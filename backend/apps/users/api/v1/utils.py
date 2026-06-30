@@ -7,6 +7,7 @@
 
 import re
 import secrets
+from typing import cast
 
 from django.core.cache import cache
 from django.http import HttpRequest
@@ -62,7 +63,7 @@ def get_sms_code(phone: str) -> str | None:
     """
     Возвращает код из Redis или None если истёк/не существует.
     """
-    return cache.get(_phone_code_key(phone))
+    return cast(str | None, cache.get(_phone_code_key(phone)))
 
 
 def delete_sms_code(phone: str) -> None:
@@ -77,7 +78,7 @@ def is_rate_limited_by_phone(phone: str) -> bool:
     Проверяет rate limit по номеру телефона.
     """
     key = _rate_phone_key(phone)
-    count = cache.get(key, 0)
+    count: int = cache.get(key, 0)
     return count >= SMS_RATE_PHONE_LIMIT
 
 
@@ -86,7 +87,7 @@ def is_rate_limited_by_ip(ip: str) -> bool:
     Проверяет rate limit по IP-адресу.
     """
     key = _rate_ip_key(ip)
-    count = cache.get(key, 0)
+    count: int = cache.get(key, 0)
     return count >= SMS_RATE_IP_LIMIT
 
 
@@ -120,8 +121,8 @@ def get_client_ip(request: HttpRequest) -> str:
     if forwarded_for:
         # X-Forwarded-For может содержать цепочку IP: "client, proxy1, proxy2"
         # Берём первый — это реальный клиент
-        return forwarded_for.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", UNKNOWN_CLIENT_IP)
+        return cast(str, forwarded_for.split(",")[0].strip())
+    return cast(str, request.META.get("REMOTE_ADDR", UNKNOWN_CLIENT_IP))
 
 
 SMS_MAX_ATTEMPTS = 5
@@ -132,7 +133,7 @@ def _attempts_key(phone: str) -> str:
 
 
 def get_attempts(phone: str) -> int:
-    return cache.get(_attempts_key(phone), 0)
+    return cache.get(_attempts_key(phone), 0)  # type: ignore[no-any-return]
 
 
 def increment_attempts(phone: str) -> int:

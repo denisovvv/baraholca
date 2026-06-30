@@ -111,6 +111,11 @@ warn_unused_ignores = true
 warn_return_any = true
 no_implicit_optional = true
 
+# type-arg отключён глобально: большинство Django/DRF generic классов
+# (ModelAdmin, ModelSerializer, ListAPIView, BaseUserManager, ...)
+# объявлены generic только в stubs, но на runtime не поддерживают subscript.
+disable_error_code = ["type-arg"]
+
 # Плагины для понимания Django ORM и DRF.
 plugins = [
     "mypy_django_plugin.main",
@@ -122,6 +127,7 @@ exclude = [
     "^manage\\.py$",
     "/migrations/",
     "^.venv/",
+    "/tests/",
 ]
 
 [tool.django-stubs]

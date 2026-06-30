@@ -43,7 +43,7 @@ class SmsRequestView(APIView):
     Запрос SMS-кода для входа/регистрации.
     """
 
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
 
     def post(self, request: Request) -> Response:
         serializer = PhoneRequestSerializer(data=request.data)
@@ -101,7 +101,7 @@ class SmsVerifyView(APIView):
     Проверка SMS-кода и выдача JWT-токенов.
     """
 
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
 
     def post(self, request: Request) -> Response:
         serializer = SmsVerifySerializer(data=request.data)

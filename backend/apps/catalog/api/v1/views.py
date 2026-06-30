@@ -35,7 +35,7 @@ class CategoryListView(generics.ListAPIView):
     """
 
     serializer_class = CategorySerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     pagination_class = None  # категорий немного, пагинация не нужна
 
     def get_queryset(self) -> QuerySet[Category]:
@@ -50,7 +50,7 @@ class WarehouseListView(generics.ListAPIView):
     """
 
     serializer_class = WarehouseListSerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     pagination_class = None  # складов немного
 
     def get_queryset(self) -> QuerySet[Warehouse]:
@@ -70,7 +70,7 @@ class ProductDetailView(generics.RetrieveAPIView):
     """
 
     serializer_class = ProductDetailSerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     lookup_field = "id"
 
     def get_queryset(self) -> QuerySet[Product]:
@@ -99,7 +99,7 @@ class ProductListView(generics.ListAPIView):
     """
 
     serializer_class = ProductListSerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     filterset_class = ProductFilter
     search_fields: ClassVar[list[str]] = ["name_short", "name_full"]
     ordering_fields: ClassVar[list[str]] = ["effective_price_anno", "name_short"]
@@ -137,7 +137,7 @@ class WarehouseNearbyView(generics.ListAPIView):
     """
 
     serializer_class = WarehouseNearbySerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     pagination_class = None
 
     def get_queryset(self) -> QuerySet[Warehouse]:
@@ -186,7 +186,7 @@ class CategoryTreeView(generics.ListAPIView):
     """
 
     serializer_class = CategoryTreeSerializer
-    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     pagination_class = None
 
     def get_queryset(self) -> QuerySet[Category]:

@@ -2,7 +2,7 @@
 Сериализаторы для API каталога: категории, склады, товары.
 """
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 
 from rest_framework import serializers
 
@@ -69,7 +69,10 @@ class CategoryTreeSerializer(serializers.ModelSerializer):
         Рекурсивно сериализует активные дочерние категории.
         """
         children = obj.children.filter(is_active=True).order_by("order", "name")
-        return CategoryTreeSerializer(children, many=True).data
+        return cast(
+            "list[dict[str, Any]]",
+            CategoryTreeSerializer(children, many=True).data,
+        )
 
 
 # ============================================================================
@@ -141,7 +144,7 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
         Расстояние до склада в километрах, округлённое до 1 знака.
         """
         if hasattr(obj, "distance") and obj.distance is not None:
-            return round(obj.distance.km, 1)
+            return cast(float, round(obj.distance.km, 1))
         return None
 
 
@@ -172,7 +175,7 @@ class ProductImageSerializer(serializers.ModelSerializer):
         if not obj.image:
             return None
         if request:
-            return request.build_absolute_uri(obj.image.url)
+            return cast(str, request.build_absolute_uri(obj.image.url))
         return obj.image.url
 
 
@@ -261,7 +264,7 @@ class ProductListSerializer(serializers.ModelSerializer):
 
         request = self.context.get("request")
         if request:
-            return request.build_absolute_uri(main.image.url)
+            return cast(str, request.build_absolute_uri(main.image.url))
         return main.image.url
 
 

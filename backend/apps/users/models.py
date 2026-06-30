@@ -5,7 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager["User"]):
     """
     Менеджер для создания пользователей по номеру телефона.
     """
@@ -31,7 +31,7 @@ class UserManager(BaseUserManager):
         if not phone:
             raise ValueError(self.PHONE_REQUIRED_ERROR)
 
-        user = self.model(phone=phone, **extra_fields)
+        user: User = self.model(phone=phone, **extra_fields)
         if password:
             user.set_password(password)
         else:
@@ -126,10 +126,10 @@ class User(AbstractBaseUser, PermissionsMixin):
     def __str__(self) -> str:
         if self.first_name or self.last_name:
             return f"{self.phone} ({self.first_name} {self.last_name})".strip()
-        return self.phone
+        return self.phone or ""
 
     def get_full_name(self) -> str:
         return f"{self.first_name} {self.last_name}".strip()
 
     def get_short_name(self) -> str:
-        return self.first_name or self.phone
+        return self.first_name or self.phone or ""

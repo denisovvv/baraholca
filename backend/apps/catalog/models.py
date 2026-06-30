@@ -110,7 +110,7 @@ class Category(models.Model):
 
         # Проверка цикла через родителей — не допускаем, чтобы категория была своим прапредком
         if self.parent and self.pk:
-            parent = self.parent
+            parent: Category | None = self.parent
             while parent:
                 if parent.pk == self.pk:
                     raise ValidationError(
@@ -420,7 +420,7 @@ class ProductStock(models.Model):
         verbose_name = "Остаток на складе"
         verbose_name_plural = "Остатки на складах"
         ordering: ClassVar[list[str]] = ["product", "warehouse"]
-        constraints: ClassVar[list[models.UniqueConstraint]] = [
+        constraints: ClassVar[list[models.BaseConstraint]] = [
             models.UniqueConstraint(
                 fields=["product", "warehouse"], name="unique_product_warehouse_stock"
             )
