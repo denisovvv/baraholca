@@ -3,6 +3,9 @@
 
 Проверяем полный цикл: запрос кода, проверка кода, выдача токенов,
 а также защиту: rate limit и защиту от перебора.
+
+Контракт ошибок — единый формат `{"error": {"code", "message"}}`,
+см. apps.common.exception_handler.
 """
 
 from django.core.cache import cache
@@ -26,10 +29,13 @@ class SmsRequestEndpointTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["status"], "sent")
 
-    def test_invalid_phone_returns_400(self):
-        """Невалидный номер — ошибка валидации 400."""
+    def test_invalid_phone_returns_validation_error(self):
+        """Невалидный номер — 422 с error.code='phone_format_invalid'."""
         response = self.client.post(self.url, {"phone": "12345"}, format="json")
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "phone_format_invalid")
+        self.assertTrue(response.data["error"]["message"])
 
     def test_phone_normalized(self):
         """Номер в формате 8... нормализуется и код сохраняется под +7..."""
@@ -37,11 +43,14 @@ class SmsRequestEndpointTests(APITestCase):
         # Код должен лежать под нормализованным номером
         self.assertIsNotNone(get_sms_code("+79991112233"))
 
-    def test_rate_limit_on_repeat(self):
-        """Повторный запрос на тот же номер сразу — rate limit 429."""
+    def test_rate_limit_returns_too_many_requests(self):
+        """Повторный запрос на тот же номер сразу — 429 с error.code='rate_limit_phone'."""
         self.client.post(self.url, {"phone": "+79991112233"}, format="json")
         response = self.client.post(self.url, {"phone": "+79991112233"}, format="json")
         self.assertEqual(response.status_code, 429)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "rate_limit_phone")
+        self.assertTrue(response.data["error"]["message"])
 
 
 class SmsVerifyEndpointTests(APITestCase):
@@ -70,6 +79,10 @@ class SmsVerifyEndpointTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("access", response.data)
         self.assertIn("refresh", response.data)
+        self.assertIsInstance(response.data["access"], str)
+        self.assertIsInstance(response.data["refresh"], str)
+        self.assertTrue(response.data["access"])
+        self.assertTrue(response.data["refresh"])
 
     def test_new_user_created(self):
         """При первом входе создаётся новый пользователь."""
@@ -93,8 +106,8 @@ class SmsVerifyEndpointTests(APITestCase):
         user = User.objects.get(phone=self.phone)
         self.assertTrue(user.phone_verified)
 
-    def test_wrong_code_returns_401(self):
-        """Неверный код — ошибка 401."""
+    def test_wrong_code_returns_authentication_error(self):
+        """Неверный код — 401 с error.code='sms_code_invalid'."""
         self._request_code()
         response = self.client.post(
             self.verify_url,
@@ -105,9 +118,12 @@ class SmsVerifyEndpointTests(APITestCase):
         if response.status_code == 200:
             self.skipTest("Случайно угадали код, редкость")
         self.assertEqual(response.status_code, 401)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "sms_code_invalid")
+        self.assertTrue(response.data["error"]["message"])
 
     def test_code_is_single_use(self):
-        """После успешного входа код больше не работает."""
+        """После успешного входа код больше не работает — 401 sms_code_expired."""
         code = self._request_code()
         # Первый раз — успех
         self.client.post(
@@ -115,13 +131,16 @@ class SmsVerifyEndpointTests(APITestCase):
             {"phone": self.phone, "code": code},
             format="json",
         )
-        # Второй раз с тем же кодом — отказ
+        # Второй раз с тем же кодом — отказ, потому что код уже удалён из Redis
         response = self.client.post(
             self.verify_url,
             {"phone": self.phone, "code": code},
             format="json",
         )
         self.assertEqual(response.status_code, 401)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "sms_code_expired")
+        self.assertTrue(response.data["error"]["message"])
 
     def test_existing_user_not_recreated(self):
         """Повторный вход существующего пользователя не создаёт дубль."""
