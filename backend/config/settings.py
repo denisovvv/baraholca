@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "django_filters",
     "drf_spectacular",
     # Project apps
+    "apps.common",
     "apps.users",
     "apps.sellers",
     "apps.catalog",
