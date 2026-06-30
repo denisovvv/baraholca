@@ -8,7 +8,6 @@ from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Case, DecimalField, F, QuerySet, When
 from rest_framework import generics
-from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import AllowAny, BasePermission
 
 from apps.catalog.api.v1.filters import ProductFilter
@@ -21,6 +20,13 @@ from apps.catalog.api.v1.serializers import (
     WarehouseNearbySerializer,
 )
 from apps.catalog.models import Category, Product, Warehouse
+from apps.common.exceptions import ValidationError
+
+# Допустимые диапазоны географических координат (WGS84, SRID 4326).
+LATITUDE_MIN = -90.0
+LATITUDE_MAX = 90.0
+LONGITUDE_MIN = -180.0
+LONGITUDE_MAX = 180.0
 
 
 class CategoryListView(generics.ListAPIView):
@@ -135,29 +141,33 @@ class WarehouseNearbyView(generics.ListAPIView):
     pagination_class = None
 
     def get_queryset(self) -> QuerySet[Warehouse]:
-        lat = self.request.query_params.get("lat")
-        lon = self.request.query_params.get("lon")
+        lat_str = self.request.query_params.get("lat")
+        lon_str = self.request.query_params.get("lon")
 
-        # Проверяем, что координаты переданы
-        if lat is None or lon is None:
-            raise ValidationError("Укажите координаты: ?lat=<широта>&lon=<долгота>")
-
-        # Проверяем, что координаты — числа в допустимом диапазоне
-        try:
-            lat = float(lat)
-            lon = float(lon)
-        except ValueError:
-            raise ValidationError("Координаты должны быть числами")
-
-        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        if lat_str is None or lon_str is None:
             raise ValidationError(
-                "Координаты вне допустимого диапазона (широта -90..90, долгота -180..180)"
+                "coordinates_missing",
+                "Укажите координаты: ?lat=<широта>&lon=<долгота>",
+            )
+
+        try:
+            lat = float(lat_str)
+            lon = float(lon_str)
+        except ValueError as exc:
+            raise ValidationError(
+                "coordinates_not_numeric",
+                "Координаты должны быть числами",
+            ) from exc
+
+        if not (LATITUDE_MIN <= lat <= LATITUDE_MAX) or not (LONGITUDE_MIN <= lon <= LONGITUDE_MAX):
+            raise ValidationError(
+                "coordinates_out_of_range",
+                "Координаты вне допустимого диапазона (широта -90..90, долгота -180..180)",
             )
 
         # Точка покупателя. ВАЖНО: Point(долгота, широта) — x, y
         user_location = Point(lon, lat, srid=4326)
 
-        # Аннотируем расстояние и сортируем по нему
         return (
             Warehouse.objects.filter(
                 is_active=True,
