@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from apps.common.exceptions import AuthenticationError, TooManyRequestsError
 from apps.notifications.sms.base import SmsProviderError
 from apps.notifications.sms.factory import get_sms_provider
 from apps.users.api.v1.serializers import (
@@ -21,8 +22,6 @@ from apps.users.api.v1.serializers import (
 from apps.users.api.v1.utils import (
     SMS_CODE_TTL,
     SMS_MAX_ATTEMPTS,
-    SMS_RATE_IP_TTL,
-    SMS_RATE_PHONE_TTL,
     delete_sms_code,
     generate_sms_code,
     get_attempts,
@@ -53,21 +52,15 @@ class SmsRequestView(APIView):
 
         client_ip = get_client_ip(request)
         if is_rate_limited_by_ip(client_ip):
-            return Response(
-                {
-                    "detail": "Слишком много запросов с вашего адреса. Попробуйте позже.",
-                    "retry_after": SMS_RATE_IP_TTL,
-                },
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            raise TooManyRequestsError(
+                "rate_limit_ip",
+                "Слишком много запросов с вашего адреса. Попробуйте позже.",
             )
 
         if is_rate_limited_by_phone(phone):
-            return Response(
-                {
-                    "detail": "Код уже был отправлен. Повторный запрос возможен через минуту.",
-                    "retry_after": SMS_RATE_PHONE_TTL,
-                },
-                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            raise TooManyRequestsError(
+                "rate_limit_phone",
+                "Код уже был отправлен. Повторный запрос возможен через минуту.",
             )
 
         code = generate_sms_code()
@@ -77,7 +70,8 @@ class SmsRequestView(APIView):
         try:
             sent = sms_provider.send(phone, code)
         except SmsProviderError:
-            # Провайдер недоступен — не штрафуем пользователя rate limit'ом
+            # Провайдер недоступен — не штрафуем пользователя rate limit'ом.
+            # TODO: завести ServiceUnavailableError и перейти на raise.
             return Response(
                 {"detail": "Не удалось отправить SMS. Попробуйте позже."},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -118,9 +112,9 @@ class SmsVerifyView(APIView):
         stored_code = get_sms_code(phone)
         if stored_code is None:
             # Кода нет: не запрашивали, истёк, или уже исчерпали попытки
-            return Response(
-                {"detail": "Код недействителен. Запросите новый."},
-                status=status.HTTP_401_UNAUTHORIZED,
+            raise AuthenticationError(
+                "sms_code_expired",
+                "Код недействителен. Запросите новый.",
             )
 
         attempts = get_attempts(phone)
@@ -128,9 +122,9 @@ class SmsVerifyView(APIView):
             # Исчерпаны попытки — инвалидируем код
             delete_sms_code(phone)
             reset_attempts(phone)
-            return Response(
-                {"detail": "Слишком много попыток. Запросите новый код."},
-                status=status.HTTP_401_UNAUTHORIZED,
+            raise AuthenticationError(
+                "sms_attempts_exhausted",
+                "Слишком много попыток. Запросите новый код.",
             )
 
         if code != stored_code:
@@ -141,14 +135,14 @@ class SmsVerifyView(APIView):
                 # Это была последняя попытка — инвалидируем код
                 delete_sms_code(phone)
                 reset_attempts(phone)
-                return Response(
-                    {"detail": "Слишком много попыток. Запросите новый код."},
-                    status=status.HTTP_401_UNAUTHORIZED,
+                raise AuthenticationError(
+                    "sms_attempts_exhausted",
+                    "Слишком много попыток. Запросите новый код.",
                 )
 
-            return Response(
-                {"detail": f"Неверный код. Осталось попыток: {remaining}"},
-                status=status.HTTP_401_UNAUTHORIZED,
+            raise AuthenticationError(
+                "sms_code_invalid",
+                f"Неверный код. Осталось попыток: {remaining}",
             )
 
         user, is_new_user = User.objects.get_or_create(
