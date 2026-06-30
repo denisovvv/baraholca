@@ -24,6 +24,9 @@ package = false
 
 [dependency-groups]
 dev = [
+    "django-stubs>=6.0.6",
+    "djangorestframework-stubs>=3.17.0",
+    "mypy>=2.1.0",
     "ruff>=0.15.19",
 ]
 
@@ -97,3 +100,36 @@ combine-as-imports = true
 quote-style = "double"
 indent-style = "space"
 line-ending = "lf"
+
+[tool.mypy]
+# Strict mode по гайдлайнам typing.md правило 1.
+python_version = "3.12"
+strict = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+no_implicit_optional = true
+
+# Плагины для понимания Django ORM и DRF.
+plugins = [
+    "mypy_django_plugin.main",
+    "mypy_drf_plugin.main",
+]
+
+# Исключаем служебное и стороннее.
+exclude = [
+    "^manage\\.py$",
+    "/migrations/",
+    "^.venv/",
+]
+
+[tool.django-stubs]
+django_settings_module = "config.settings"
+
+# Тесты — менее строгие.
+[[tool.mypy.overrides]]
+module = "*.tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
