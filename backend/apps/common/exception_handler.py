@@ -24,13 +24,28 @@ from rest_framework.views import exception_handler as drf_exception_handler
 
 from apps.common.exceptions import (
     AppError,
+    AuthenticationError,
     ConflictError,
     DomainError,
     NotFoundError,
+    TooManyRequestsError,
     ValidationError,
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Таблица маппинга доменных исключений в HTTP-статусы.
+# Порядок строк важен: специфичные подклассы перед предками,
+# чтобы первое isinstance-совпадение давало правильный статус.
+_DOMAIN_ERROR_STATUSES: list[tuple[type[AppError], int]] = [
+    (AuthenticationError, status.HTTP_401_UNAUTHORIZED),
+    (NotFoundError, status.HTTP_404_NOT_FOUND),
+    (ConflictError, status.HTTP_409_CONFLICT),
+    (ValidationError, status.HTTP_422_UNPROCESSABLE_ENTITY),
+    (TooManyRequestsError, status.HTTP_429_TOO_MANY_REQUESTS),
+    (DomainError, status.HTTP_400_BAD_REQUEST),
+]
 
 
 def _error_response(code: str, message: str, http_status: int) -> Response:
@@ -77,24 +92,14 @@ def _handle_app_error(exc: AppError) -> Response:
     """
     Маппинг доменного исключения в HTTP-ответ.
 
-    Порядок проверки важен: наследники проверяются перед предками
-    (NotFoundError -> ConflictError -> ValidationError -> DomainError -> AppError),
-    чтобы более специфичный класс перехватывался первым.
+    Итерирует _DOMAIN_ERROR_STATUSES в декларативном порядке и возвращает
+    ответ для первого подходящего класса. Если ни один не совпал -
+    значит, это AppError без подкласса (бага кода): логируем и отдаём 500.
     """
-    if isinstance(exc, NotFoundError):
-        return _error_response(exc.error_code, exc.message, status.HTTP_404_NOT_FOUND)
+    for exc_class, http_status in _DOMAIN_ERROR_STATUSES:
+        if isinstance(exc, exc_class):
+            return _error_response(exc.error_code, exc.message, http_status)
 
-    if isinstance(exc, ConflictError):
-        return _error_response(exc.error_code, exc.message, status.HTTP_409_CONFLICT)
-
-    if isinstance(exc, ValidationError):
-        return _error_response(exc.error_code, exc.message, status.HTTP_422_UNPROCESSABLE_ENTITY)
-
-    if isinstance(exc, DomainError):
-        # DomainError напрямую без специализации - редкий случай.
-        return _error_response(exc.error_code, exc.message, status.HTTP_400_BAD_REQUEST)
-
-    # AppError без подкласса - это бага кода, логируем и отвечаем 500.
     logger.exception("AppError leaked to handler without domain subclass")
     return _error_response(exc.error_code, exc.message, status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -122,6 +127,7 @@ def _drf_exception_code(exc: Exception) -> str:
         "AuthenticationFailed": "authentication_failed",
         "PermissionDenied": "permission_denied",
         "NotFound": "not_found",
+        "Http404": "not_found",
         "MethodNotAllowed": "method_not_allowed",
         "NotAcceptable": "not_acceptable",
         "UnsupportedMediaType": "unsupported_media_type",

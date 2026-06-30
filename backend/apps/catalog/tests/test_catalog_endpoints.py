@@ -116,10 +116,13 @@ class ProductDetailTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name_short"], "Кружка")
 
-    def test_nonexistent_returns_404(self):
-        """Несуществующий товар — 404."""
+    def test_nonexistent_returns_not_found_error(self):
+        """Несуществующий товар — 404 в едином контракте {error: {code, message}}."""
         response = self.client.get("/api/v1/catalog/products/99999/")
         self.assertEqual(response.status_code, 404)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "not_found")
+        self.assertTrue(response.data["error"]["message"])
 
 
 class WarehouseNearbyTests(APITestCase):
@@ -165,15 +168,29 @@ class WarehouseNearbyTests(APITestCase):
         response = self.client.get(self.url, {"lat": 51.66, "lon": 39.20})
         self.assertIn("distance_km", response.data[0])
 
-    def test_missing_coordinates_returns_400(self):
-        """Без координат — ошибка валидации 400."""
+    def test_missing_coordinates_returns_validation_error(self):
+        """Без координат — 422 с error.code='coordinates_missing'."""
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "coordinates_missing")
+        self.assertTrue(response.data["error"]["message"])
 
-    def test_invalid_coordinates_returns_400(self):
-        """Координаты-буквы — ошибка 400."""
+    def test_invalid_coordinates_returns_validation_error(self):
+        """Координаты-буквы — 422 с error.code='coordinates_not_numeric'."""
         response = self.client.get(self.url, {"lat": "abc", "lon": "39"})
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "coordinates_not_numeric")
+        self.assertTrue(response.data["error"]["message"])
+
+    def test_out_of_range_coordinates_returns_validation_error(self):
+        """Широта вне диапазона -90..90 — 422 с error.code='coordinates_out_of_range'."""
+        response = self.client.get(self.url, {"lat": "200", "lon": "39"})
+        self.assertEqual(response.status_code, 422)
+        self.assertIn("error", response.data)
+        self.assertEqual(response.data["error"]["code"], "coordinates_out_of_range")
+        self.assertTrue(response.data["error"]["message"])
 
 
 class CategoryTreeTests(APITestCase):

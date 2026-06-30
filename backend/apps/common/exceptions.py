@@ -7,13 +7,14 @@
 
 Принципы:
 - Исключения - plain Python, без зависимостей от DRF/Django.
-- Класс задаёт ХТТП-категорию (404 / 409 / 422 / 500).
+- Класс задаёт HTTP-категорию (401 / 404 / 409 / 422 / 429 / 500).
 - `error_code` - стабильный машинно-читаемый код для клиента,
   передаётся при `raise` и характеризует конкретную причину.
 
 Пример:
     raise NotFoundError("user_not_found", "Пользователь не найден")
-    raise ConflictError("rate_limit_phone", "Слишком много запросов на этот номер")
+    raise AuthenticationError("sms_code_invalid", "Неверный код")
+    raise TooManyRequestsError("rate_limit_phone", "Слишком частые запросы")
 """
 
 
@@ -41,7 +42,8 @@ class DomainError(AppError):
 
     На транспортном уровне отображается в 4xx-ответы.
     В сервисах и доменном слое использовать наследников:
-    `NotFoundError`, `ConflictError`, `ValidationError`.
+    `NotFoundError`, `ConflictError`, `ValidationError`,
+    `AuthenticationError`, `TooManyRequestsError`.
     """
 
     default_error_code = "domain_error"
@@ -62,10 +64,11 @@ class NotFoundError(DomainError):
 
 class ConflictError(DomainError):
     """
-    Конфликт состояния: дубликат, неверный переход, rate limit.
+    Конфликт состояния: дубликат, неверный переход состояния.
 
-    Маппится на HTTP 409. Примеры `error_code`:
-    `order_already_paid`, `rate_limit_phone`, `phone_already_used`.
+    Маппится на HTTP 409. Для rate-limit использовать `TooManyRequestsError`.
+    Примеры `error_code`: `order_already_paid`, `phone_already_used`,
+    `cart_already_checked_out`.
     """
 
     default_error_code = "conflict"
@@ -79,7 +82,7 @@ class ValidationError(DomainError):
     Маппится на HTTP 422. Используется для бизнес-правил, которые
     нельзя поймать в сериализаторе (формат уже корректен,
     но семантика нарушена). Примеры `error_code`:
-    `invalid_coordinates`, `discount_too_large`, `phone_format_invalid`.
+    `coordinates_out_of_range`, `discount_too_large`, `phone_format_invalid`.
 
     Не путать с `rest_framework.exceptions.ValidationError` -
     та сериализаторная, эта доменная.
@@ -87,3 +90,34 @@ class ValidationError(DomainError):
 
     default_error_code = "validation_error"
     default_message = "Ошибка валидации данных"
+
+
+class AuthenticationError(DomainError):
+    """
+    Аутентификация не пройдена.
+
+    Маппится на HTTP 401. Используется когда клиент не смог доказать,
+    кто он (неверный код, истёкший токен и т.п.). Не путать с
+    авторизацией (403): там клиент известен, но операция запрещена.
+
+    Примеры `error_code`: `sms_code_invalid`, `sms_code_expired`,
+    `sms_attempts_exhausted`, `token_invalid`.
+    """
+
+    default_error_code = "authentication_failed"
+    default_message = "Аутентификация не пройдена"
+
+
+class TooManyRequestsError(DomainError):
+    """
+    Превышен лимит частоты запросов.
+
+    Маппится на HTTP 429. Используется для rate limiting на любом
+    срезе: IP, пользователь, номер телефона, ключ API.
+
+    Примеры `error_code`: `rate_limit_ip`, `rate_limit_phone`,
+    `rate_limit_user`.
+    """
+
+    default_error_code = "too_many_requests"
+    default_message = "Слишком много запросов"
