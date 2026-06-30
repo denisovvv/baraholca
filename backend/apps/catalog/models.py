@@ -6,6 +6,13 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.text import slugify
 
+# Максимальная глубина дерева категорий (количество уровней: 0..MAX-1).
+MAX_CATEGORY_DEPTH = 3
+
+# Тексты сообщений валидации.
+PRODUCTION_TIME_REQUIRED_MESSAGE = "Для товаров под заказ обязательно указать время изготовления"
+RESERVED_OVER_QUANTITY_TEMPLATE = "Резерв ({reserved}) не может превышать остаток ({quantity})"
+
 
 class Category(models.Model):
     """
@@ -91,13 +98,15 @@ class Category(models.Model):
         if self.parent and self.parent == self:
             raise ValidationError({"parent": "Категория не может быть родителем самой себе"})
 
-        # Проверка глубины — максимум 3 уровня (0, 1, 2)
-        if self.parent:
-            # get_level() считает от 0 — если у родителя level=2, то у нас будет level=3, что уже слишком
-            if self.parent.get_level() >= 2:
-                raise ValidationError(
-                    {"parent": "Превышена максимальная глубина вложенности (3 уровня)"}
-                )
+        # Проверка глубины — глубина следующего уровня не должна превышать MAX_CATEGORY_DEPTH
+        if self.parent and self.parent.get_level() + 1 >= MAX_CATEGORY_DEPTH:
+            raise ValidationError(
+                {
+                    "parent": (
+                        f"Превышена максимальная глубина вложенности ({MAX_CATEGORY_DEPTH} уровня)"
+                    )
+                }
+            )
 
         # Проверка цикла через родителей — не допускаем, чтобы категория была своим прапредком
         if self.parent and self.pk:
@@ -323,19 +332,15 @@ class Product(models.Model):
         - У товара «под заказ» обязательно должно быть время изготовления
         - Скидочная цена должна быть меньше базовой (иначе нет смысла)
         """
-        if self.product_type == self.TYPE_MADE_TO_ORDER:
-            if not self.production_time_days:
-                raise ValidationError(
-                    {
-                        "production_time_days": "Для товаров под заказ обязательно указать время изготовления"
-                    }
-                )
+        if self.product_type == self.TYPE_MADE_TO_ORDER and not self.production_time_days:
+            raise ValidationError({"production_time_days": PRODUCTION_TIME_REQUIRED_MESSAGE})
 
-        if self.discount_price is not None and self.base_price is not None:
-            if self.discount_price >= self.base_price:
-                raise ValidationError(
-                    {"discount_price": "Скидочная цена должна быть меньше базовой"}
-                )
+        if (
+            self.discount_price is not None
+            and self.base_price is not None
+            and self.discount_price >= self.base_price
+        ):
+            raise ValidationError({"discount_price": "Скидочная цена должна быть меньше базовой"})
 
 
 class ProductImage(models.Model):
@@ -450,6 +455,9 @@ class ProductStock(models.Model):
         if self.reserved_quantity > self.quantity:
             raise ValidationError(
                 {
-                    "reserved_quantity": f"Резерв ({self.reserved_quantity}) не может превышать остаток ({self.quantity})"
+                    "reserved_quantity": RESERVED_OVER_QUANTITY_TEMPLATE.format(
+                        reserved=self.reserved_quantity,
+                        quantity=self.quantity,
+                    )
                 }
             )
