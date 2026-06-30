@@ -85,7 +85,7 @@ allowed-confusables = [
 # settings.py: разрешаем "магические" константы и длинные конфиги
 "config/settings.py" = ["PLR2004", "E501", "S105"]
 # manage.py: служебный, Django сам генерирует
-"manage.py" = ["ANN", "T20", "TRY003"]  # Django-сгенерированный ImportError
+"manage.py" = ["ANN", "T20", "TRY003", "PLC0415"]  # Django-сгенерированный try/except ImportError
 # __init__.py: часто пустые или содержат только re-export
 "**/__init__.py" = ["F401", "D"]
 

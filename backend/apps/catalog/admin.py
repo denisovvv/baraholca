@@ -93,7 +93,9 @@ class WarehouseAdmin(GISModelAdmin):
             "Местоположение",
             {
                 "fields": ("location", "delivery_area"),
-                "description": "Точка центра склада обязательна. Полигон зоны доставки можно нарисовать позже.",
+                "description": (
+                    "Точка центра склада обязательна. Полигон зоны доставки можно нарисовать позже."
+                ),
             },
         ),
         ("Настройки", {"fields": ("pickup_available", "working_hours", "contact_phone")}),
@@ -319,7 +321,10 @@ class ProductAdmin(admin.ModelAdmin):
                 if skipped_count:
                     self.message_user(
                         request,
-                        f"Пропущено {skipped_count} товаров (скидка слишком большая или цена не уменьшается).",
+                        (
+                            f"Пропущено {skipped_count} товаров "
+                            "(скидка слишком большая или цена не уменьшается)."
+                        ),
                         messages.WARNING,
                     )
 

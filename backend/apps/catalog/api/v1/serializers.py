@@ -116,7 +116,8 @@ class WarehouseDetailSerializer(WarehouseListSerializer):
     """
 
     class Meta(WarehouseListSerializer.Meta):
-        fields: ClassVar[list[str]] = WarehouseListSerializer.Meta.fields + [
+        fields: ClassVar[list[str]] = [
+            *WarehouseListSerializer.Meta.fields,
             "contact_phone",
             "working_hours",
         ]
@@ -130,7 +131,10 @@ class WarehouseNearbySerializer(WarehouseListSerializer):
     distance_km = serializers.SerializerMethodField()
 
     class Meta(WarehouseListSerializer.Meta):
-        fields: ClassVar[list[str]] = WarehouseListSerializer.Meta.fields + ["distance_km"]
+        fields: ClassVar[list[str]] = [
+            *WarehouseListSerializer.Meta.fields,
+            "distance_km",
+        ]
 
     def get_distance_km(self, obj: Warehouse) -> float | None:
         """
@@ -270,7 +274,8 @@ class ProductDetailSerializer(ProductListSerializer):
     stocks = ProductStockSerializer(many=True, read_only=True)
 
     class Meta(ProductListSerializer.Meta):
-        fields: ClassVar[list[str]] = ProductListSerializer.Meta.fields + [
+        fields: ClassVar[list[str]] = [
+            *ProductListSerializer.Meta.fields,
             "name_full",
             "description",
             "production_time_days",

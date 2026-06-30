@@ -7,6 +7,7 @@
 
 from decimal import Decimal
 
+from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -104,7 +105,6 @@ class ProductStockTests(TestCase):
             base_price=Decimal("500.00"),
             product_type="stock",
         )
-        from django.contrib.gis.geos import Point
 
         self.warehouse = Warehouse.objects.create(
             seller=self.seller,

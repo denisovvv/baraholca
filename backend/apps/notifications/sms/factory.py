@@ -19,6 +19,12 @@ PROVIDERS = {
 }
 
 
+PROVIDER_NOT_CONFIGURED_TEMPLATE = (
+    "SMS_PROVIDER не задан в settings.py. Укажите одно из: {available}"
+)
+UNKNOWN_PROVIDER_TEMPLATE = "Неизвестный SMS-провайдер: {name}. Доступные: {available}"
+
+
 def get_sms_provider() -> SmsProvider:
     """
     Возвращает экземпляр SMS-провайдера
@@ -27,14 +33,18 @@ def get_sms_provider() -> SmsProvider:
 
     if not provider_name:
         raise ImproperlyConfigured(
-            "SMS_PROVIDER не задан в settings.py. Укажите одно из: %s" % ", ".join(PROVIDERS.keys())
+            PROVIDER_NOT_CONFIGURED_TEMPLATE.format(
+                available=", ".join(PROVIDERS.keys()),
+            )
         )
 
     provider_class = PROVIDERS.get(provider_name)
     if provider_class is None:
         raise ImproperlyConfigured(
-            "Неизвестный SMS-провайдер: %s. "
-            "Доступные: %s" % (provider_name, ", ".join(PROVIDERS.keys()))
+            UNKNOWN_PROVIDER_TEMPLATE.format(
+                name=provider_name,
+                available=", ".join(PROVIDERS.keys()),
+            )
         )
 
     return provider_class()

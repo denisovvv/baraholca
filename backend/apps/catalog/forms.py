@@ -46,7 +46,7 @@ class WorkingHoursWidget(forms.Widget):
         Вызывается при сохранении формы — собирает данные обратно в JSON.
         """
         result = {}
-        for day_key, day_label in DAYS_OF_WEEK:
+        for day_key, _day_label in DAYS_OF_WEEK:
             is_open = data.get(f"{name}_{day_key}_open_flag") == "on"
             if is_open:
                 open_time = data.get(f"{name}_{day_key}_open_time", "").strip()
@@ -184,11 +184,9 @@ class ApplyDiscountForm(forms.Form):
         percent_value = cleaned_data.get("percent_value")
         fixed_value = cleaned_data.get("fixed_value")
 
-        if discount_type == self.DISCOUNT_TYPE_PERCENT:
-            if not percent_value:
-                raise forms.ValidationError({"percent_value": "Укажите размер скидки в процентах"})
-        elif discount_type == self.DISCOUNT_TYPE_FIXED:
-            if not fixed_value:
-                raise forms.ValidationError({"fixed_value": "Укажите размер скидки в рублях"})
+        if discount_type == self.DISCOUNT_TYPE_PERCENT and not percent_value:
+            raise forms.ValidationError({"percent_value": "Укажите размер скидки в процентах"})
+        if discount_type == self.DISCOUNT_TYPE_FIXED and not fixed_value:
+            raise forms.ValidationError({"fixed_value": "Укажите размер скидки в рублях"})
 
         return cleaned_data
