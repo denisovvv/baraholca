@@ -11,6 +11,8 @@ from rest_framework import serializers
 from apps.users.api.v1.utils import normalize_phone
 from apps.users.models import User
 
+SMS_CODE_DIGITS_ERROR_MESSAGE = "Код должен состоять из цифр"
+
 
 class UserSerializer(serializers.ModelSerializer):
     """
@@ -70,5 +72,5 @@ class SmsVerifySerializer(serializers.Serializer):
 
     def validate_code(self, value: str) -> str:
         if not value.isdigit():
-            raise serializers.ValidationError("Код должен состоять из цифр")
+            raise serializers.ValidationError(SMS_CODE_DIGITS_ERROR_MESSAGE)
         return value

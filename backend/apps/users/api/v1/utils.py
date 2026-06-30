@@ -10,7 +10,8 @@ import secrets
 
 from django.core.cache import cache
 from django.http import HttpRequest
-from rest_framework.exceptions import ValidationError
+
+from apps.common.exceptions import ValidationError
 
 # Время жизни кода
 SMS_CODE_TTL = 300  # 5 минут
@@ -22,6 +23,13 @@ SMS_RATE_PHONE_LIMIT = 1  # не более 1 запроса в окне
 # Rate limiting — по IP-адресу
 SMS_RATE_IP_TTL = 3600  # окно 1 час
 SMS_RATE_IP_LIMIT = 5  # не более 5 запросов в окне
+
+# Российский номер телефона: код страны 7 + 10 цифр номера = 11 цифр.
+PHONE_DIGITS_COUNT = 11
+
+# Маркер "IP неизвестен" - используется когда REMOTE_ADDR отсутствует в запросе.
+# Не привязка сокета, а заглушка-строка.
+UNKNOWN_CLIENT_IP = "0.0.0.0"  # noqa: S104  # строковый маркер unknown, не сетевая привязка
 
 
 def generate_sms_code() -> str:
@@ -113,7 +121,7 @@ def get_client_ip(request: HttpRequest) -> str:
         # X-Forwarded-For может содержать цепочку IP: "client, proxy1, proxy2"
         # Берём первый — это реальный клиент
         return forwarded_for.split(",")[0].strip()
-    return request.META.get("REMOTE_ADDR", "0.0.0.0")
+    return request.META.get("REMOTE_ADDR", UNKNOWN_CLIENT_IP)
 
 
 SMS_MAX_ATTEMPTS = 5
@@ -148,9 +156,12 @@ def normalize_phone(value: str) -> str:
     """
     digits = re.sub(r"\D", "", value)
 
-    if len(digits) == 11 and digits[0] in ("7", "8"):
+    if len(digits) == PHONE_DIGITS_COUNT and digits[0] in ("7", "8"):
         digits = "7" + digits[1:]
     else:
-        raise ValidationError("Введите корректный номер телефона в формате +7XXXXXXXXXX")
+        raise ValidationError(
+            "phone_format_invalid",
+            "Введите корректный номер телефона в формате +7XXXXXXXXXX",
+        )
 
     return "+" + digits

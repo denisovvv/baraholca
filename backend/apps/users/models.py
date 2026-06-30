@@ -10,6 +10,14 @@ class UserManager(BaseUserManager):
     Менеджер для создания пользователей по номеру телефона.
     """
 
+    # Сообщения об ошибках программного контракта (не пользовательского ввода).
+    # Эти ValueError индикаторы неправильного вызова менеджера — должны
+    # происходить только в коде разработчика, не в рантайме на запросах.
+    PHONE_REQUIRED_ERROR = "Не указан номер телефона"
+    STAFF_REQUIRED_ERROR = "Суперпользователь должен иметь is_staff=True"
+    SUPERUSER_REQUIRED_ERROR = "Суперпользователь должен иметь is_superuser=True"
+    PASSWORD_REQUIRED_ERROR = "Суперпользователь должен иметь пароль"  # noqa: S105  # сообщение об ошибке, не пароль
+
     def create_user(
         self,
         phone: str,
@@ -21,7 +29,7 @@ class UserManager(BaseUserManager):
         Пароль обычно не указывается — покупатели входят по коду подтверждения.
         """
         if not phone:
-            raise ValueError("Не указан номер телефона")
+            raise ValueError(self.PHONE_REQUIRED_ERROR)
 
         user = self.model(phone=phone, **extra_fields)
         if password:
@@ -46,11 +54,11 @@ class UserManager(BaseUserManager):
         extra_fields.setdefault("is_active", True)
 
         if extra_fields.get("is_staff") is not True:
-            raise ValueError("Суперпользователь должен иметь is_staff=True")
+            raise ValueError(self.STAFF_REQUIRED_ERROR)
         if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Суперпользователь должен иметь is_superuser=True")
+            raise ValueError(self.SUPERUSER_REQUIRED_ERROR)
         if not password:
-            raise ValueError("Суперпользователь должен иметь пароль")
+            raise ValueError(self.PASSWORD_REQUIRED_ERROR)
 
         return self.create_user(phone, password, **extra_fields)
 
