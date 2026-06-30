@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 import os
+import sys
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -185,7 +187,6 @@ REST_FRAMEWORK = {
 # JWT configuration
 # ============================================================================
 
-from datetime import timedelta
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
@@ -236,8 +237,46 @@ SPECTACULAR_SETTINGS = {
 }
 
 # ============================================================================
+# ============================================================================
+# Logging
+# ============================================================================
+# Конфигурация логирования.
+# - Кастомные логгеры приложения (apps.*) пишут INFO+ в stdout чистым форматом
+#   (для DEV-удобства при runserver: сообщения SmsProvider видны как есть).
+# - Стандартные Django логгеры (django.*, root) сохраняют дефолтное поведение.
+# - В тестах apps.* поднимается до WARNING (см. test settings, если будут).
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "plain": {
+            "format": "%(message)s",
+        },
+    },
+    "handlers": {
+        "console_plain": {
+            "class": "logging.StreamHandler",
+            "formatter": "plain",
+        },
+    },
+    "loggers": {
+        "apps": {
+            "handlers": ["console_plain"],
+            "level": "INFO",
+            "propagate": False,
+        },
+    },
+}
+
+
+# В тестах гасим INFO от apps.* — иначе stderr забивается SMS-кодами.
+if "test" in sys.argv:
+    LOGGING["loggers"]["apps"]["level"] = "WARNING"
+
+# ============================================================================
 # Security settings for production
 # ============================================================================
+
 # Эти настройки включаются только когда DEBUG=False (на проде).
 # Локально (DEBUG=True) они не применяются, чтобы не мешать разработке
 # без HTTPS.
