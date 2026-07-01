@@ -109,10 +109,19 @@ def _rewrap_drf_response(response: Response, exc: Exception) -> Response:
     Переоборачивает стандартный ответ DRF в наш формат {"error": {"code", "message"}}.
 
     Тип DRF-исключения определяет `code`, текст исключения - `message`.
+
+    Для DRF ValidationError переопределяем статус с 400 на 422:
+    единый contract требует что все "невалидное тело запроса" - это 422,
+    независимо от источника (наш доменный ValidationError или DRF-сериализатор).
+    Клиенту не нужно различать эти случаи - для него это одна семантическая
+    категория "твоё тело не прошло проверку".
     """
     code = _drf_exception_code(exc)
     message = _drf_extract_message(response.data)
-    return _error_response(code, message, response.status_code)
+    http_status = response.status_code
+    if type(exc).__name__ == "ValidationError":
+        http_status = status.HTTP_422_UNPROCESSABLE_ENTITY
+    return _error_response(code, message, http_status)
 
 
 def _drf_exception_code(exc: Exception) -> str:
