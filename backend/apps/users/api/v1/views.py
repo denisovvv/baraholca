@@ -5,19 +5,20 @@ API views для пользователей и аутентификации.
 from typing import ClassVar
 
 from rest_framework import status
-from rest_framework.permissions import AllowAny, BasePermission
+from rest_framework.permissions import AllowAny, BasePermission, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.common.exceptions import AuthenticationError, TooManyRequestsError
+from apps.common.exceptions import AuthenticationError, TooManyRequestsError, ValidationError
 from apps.notifications.sms.base import SmsProviderError
 from apps.notifications.sms.factory import get_sms_provider
 from apps.users.api.v1.serializers import (
     PhoneRequestSerializer,
     SmsVerifySerializer,
     UserSerializer,
+    UserUpdateSerializer,
 )
 from apps.users.api.v1.utils import (
     SMS_CODE_TTL,
@@ -169,3 +170,51 @@ class SmsVerifyView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class UserMeView(APIView):
+    """
+    Профиль текущего пользователя.
+
+    GET — вернуть свой профиль.
+    PATCH — частично обновить свой профиль (first_name, last_name).
+
+    Endpoint работает только с request.user — доступа к чужим профилям
+    нет по дизайну (нет id в URL). Требует аутентификации.
+    """
+
+    permission_classes: ClassVar[list[type[BasePermission]]] = [IsAuthenticated]  # type: ignore[misc]
+
+    def get(self, request: Request) -> Response:
+        """
+        Вернуть профиль текущего пользователя.
+        """
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request: Request) -> Response:
+        """
+        Частично обновить профиль текущего пользователя.
+
+        Пустое тело запроса считается ошибкой клиента (обычно баг формы,
+        не собравшей изменённые поля) — отвечаем 422 nothing_to_update,
+        чтобы разработчик Flutter быстро увидел проблему.
+        """
+        if not request.data:
+            raise ValidationError(
+                "nothing_to_update",
+                "Не переданы поля для обновления.",
+            )
+
+        serializer = UserUpdateSerializer(
+            request.user,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        # Отдаём полный профиль после обновления (не только изменённые поля).
+        # Клиенту удобнее иметь актуальное состояние целиком одним ответом.
+        read_serializer = UserSerializer(request.user)
+        return Response(read_serializer.data, status=status.HTTP_200_OK)
