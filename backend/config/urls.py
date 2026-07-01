@@ -20,7 +20,8 @@ urlpatterns = [
     # Admin
     path("admin/", admin.site.urls),
     # API v1
-    path("api/v1/auth/", include("apps.users.api.v1.urls")),
+    path("api/v1/auth/", include("apps.users.api.v1.urls_auth")),
+    path("api/v1/users/", include("apps.users.api.v1.urls_user")),
     path("api/v1/catalog/", include("apps.catalog.api.v1.urls")),
     # API documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

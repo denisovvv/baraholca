@@ -7,7 +7,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 
 from apps.users.api.v1 import views
 
-app_name = "users_api_v1"
+app_name = "users_auth_v1"
 
 urlpatterns = [
     path("sms/request/", views.SmsRequestView.as_view(), name="sms-request"),
