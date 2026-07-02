@@ -29,10 +29,10 @@ from apps.orders.services.allocation import (
     WarehouseAllocation,
 )
 from apps.orders.services.warehouse_allocator import WarehouseAllocator
+from apps.sellers.models import Seller
 
 if TYPE_CHECKING:
     from apps.catalog.models import Product, Warehouse
-    from apps.sellers.models import Seller
     from apps.users.models import User
 
 
@@ -205,9 +205,12 @@ class CheckoutService:
     @staticmethod
     def _generate_order_number(seller: "Seller") -> str:
         """
-        Простой COUNT для MVP. В Шаге 6c заменим на SELECT FOR UPDATE
-        для гарантии уникальности при конкурентных checkout.
+        SELECT FOR UPDATE блокирует строку Seller до конца транзакции.
+        Другие параллельные checkout у того же продавца ждут; для разных
+        продавцов блокировки независимы. Работает только внутри
+        @transaction.atomic — perform_checkout уже обёрнут.
         """
+        Seller.objects.select_for_update().filter(pk=seller.pk).first()
         year = timezone.now().year
         prefix = seller.order_prefix
         count = Order.objects.filter(
