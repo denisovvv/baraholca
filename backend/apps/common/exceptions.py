@@ -30,9 +30,28 @@ class AppError(Exception):
     default_error_code = "app_error"
     default_message = "Внутренняя ошибка приложения"
 
-    def __init__(self, error_code: str | None = None, message: str | None = None) -> None:
+    def __init__(
+        self,
+        error_code: str | None = None,
+        message: str | None = None,
+        details: dict | list | None = None,
+    ) -> None:
+        """
+        Инициализировать доменное исключение.
+
+        Параметры:
+            error_code: стабильный машинно-читаемый код (напр. "not_enough_stock")
+            message: человекочитаемое сообщение для пользователя
+            details: опциональная структура с деталями ошибки. Может быть
+                dict (одиночная ошибка со структурой) или list (массив
+                проблемных элементов). Пример: [{"product_id": 42,
+                "requested": 5, "available": 3}]. Используется когда клиенту
+                нужны не только код и текст, но и данные для реакции —
+                например, обновить корзину при not_enough_stock.
+        """
         self.error_code = error_code or self.default_error_code
         self.message = message or self.default_message
+        self.details = details
         super().__init__(self.message)
 
 

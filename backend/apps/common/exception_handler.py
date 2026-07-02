@@ -48,12 +48,29 @@ _DOMAIN_ERROR_STATUSES: list[tuple[type[AppError], int]] = [
 ]
 
 
-def _error_response(code: str, message: str, http_status: int) -> Response:
+def _error_response(
+    code: str,
+    message: str,
+    http_status: int,
+    details: dict | list | None = None,
+) -> Response:
     """
     Сформировать ответ в едином формате `{"error": {"code", "message"}}`.
+
+    Если передан details (dict или list) - он включается в тело ошибки
+    как отдельное поле. Обратная совместимость: без details поле не
+    появляется в JSON, старые клиенты работают как раньше.
+
+    Пример с details:
+        {"error": {"code": "not_enough_stock",
+                   "message": "...",
+                   "details": [{"product_id": 42, "requested": 5, "available": 3}]}}
     """
+    error_body: dict = {"code": code, "message": message}
+    if details is not None:
+        error_body["details"] = details
     return Response(
-        {"error": {"code": code, "message": message}},
+        {"error": error_body},
         status=http_status,
     )
 
@@ -98,10 +115,12 @@ def _handle_app_error(exc: AppError) -> Response:
     """
     for exc_class, http_status in _DOMAIN_ERROR_STATUSES:
         if isinstance(exc, exc_class):
-            return _error_response(exc.error_code, exc.message, http_status)
+            return _error_response(exc.error_code, exc.message, http_status, exc.details)
 
     logger.exception("AppError leaked to handler without domain subclass")
-    return _error_response(exc.error_code, exc.message, status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return _error_response(
+        exc.error_code, exc.message, status.HTTP_500_INTERNAL_SERVER_ERROR, exc.details
+    )
 
 
 def _rewrap_drf_response(response: Response, exc: Exception) -> Response:
