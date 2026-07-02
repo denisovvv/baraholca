@@ -125,14 +125,16 @@ class WarehouseAllocator:
             )
 
         # Шаг 4: жадное распределение по нескольким складам.
-        allocations, unmet = WarehouseAllocator._greedy_allocate(warehouses, items, stock_matrix)
+        allocations, unmet_available = WarehouseAllocator._greedy_allocate(
+            warehouses, items, stock_matrix
+        )
 
-        if unmet:
+        if unmet_available:
             # Есть товары которые не покрыты суммой складов.
             raise ValidationError(
                 error_code="not_enough_stock",
                 message="Недостаточно товаров на складе.",
-                details=WarehouseAllocator._build_stock_details(unmet, items),
+                details=WarehouseAllocator._build_stock_details(unmet_available, items),
             )
 
         return AllocationResult(allocations=allocations)
@@ -335,13 +337,18 @@ class WarehouseAllocator:
                     WarehouseAllocation(warehouse=best_warehouse, items=allocated_items)
                 )
 
-        # Что осталось нераспределённым
-        unmet = {pk: qty for pk, qty in remaining.items() if qty > 0}
-        return allocations, unmet
+        # Вычисляем сколько удалось РАСПРЕДЕЛИТЬ по каждому товару,
+        # для товаров которые остались нераспределёнными полностью или частично.
+        # available = requested - remaining (сколько нашли).
+        requested_by_pk = {p.pk: qty for p, qty in items}
+        available_by_pk = {
+            pk: requested_by_pk[pk] - remaining[pk] for pk in remaining if remaining[pk] > 0
+        }
+        return allocations, available_by_pk
 
     @staticmethod
     def _build_stock_details(
-        unmet_by_pk: dict[int, int],
+        available_by_pk: dict[int, int],
         items: list[tuple["Product", int]],
     ) -> list[dict]:
         """
@@ -359,14 +366,10 @@ class WarehouseAllocator:
         by_pk = {p.pk: (p, qty) for p, qty in items}
 
         details = []
-        for pk, unmet_qty in unmet_by_pk.items():
+        for pk, available in available_by_pk.items():
             if pk not in by_pk:
                 continue
             product, requested = by_pk[pk]
-            # Для courier unmet_qty — недостающее, значит available = requested - unmet
-            # Для pickup unmet_qty — сколько есть (сколько не хватает не важно)
-            # Для унификации: available = requested - unmet, но не меньше 0
-            available = max(0, requested - unmet_qty)
             details.append(
                 {
                     "product_id": product.pk,
