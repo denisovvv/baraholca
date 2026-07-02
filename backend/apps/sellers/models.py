@@ -32,7 +32,7 @@ class Seller(models.Model):
     # Префикс для генерации номера заказа (см. Order.number: BX-{prefix}-{год}-{номер})
     order_prefix = models.CharField(
         max_length=8,
-        blank=True,
+        unique=True,
         verbose_name="Префикс заказов",
         help_text='Используется в номере заказа: BX-{префикс}-{год}-{номер}. Пример: "RYA"',
     )

@@ -5,13 +5,13 @@ from apps.sellers.models import Seller, SellerStaff
 
 @admin.register(Seller)
 class SellerAdmin(admin.ModelAdmin):
-    list_display = ("short_name", "name", "inn", "is_active", "created_at")
+    list_display = ("short_name", "order_prefix", "name", "inn", "is_active", "created_at")
     list_filter = ("is_active",)
-    search_fields = ("name", "short_name", "inn", "ogrnip")
+    search_fields = ("name", "short_name", "inn", "ogrnip", "order_prefix")
     readonly_fields = ("created_at", "updated_at", "uuid_1c")
 
     fieldsets = (
-        ("Юридические данные", {"fields": ("name", "short_name", "inn", "ogrnip")}),
+        ("Юридические данные", {"fields": ("name", "short_name", "inn", "ogrnip", "order_prefix")}),
         ("Контакты", {"fields": ("contact_phone", "contact_email")}),
         ("Управление", {"fields": ("admin_user", "is_active")}),
         (
