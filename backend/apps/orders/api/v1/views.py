@@ -8,13 +8,17 @@ OrdersView — коллекция:
 OrderDetailView — конкретный ресурс:
   GET  /api/v1/orders/{uuid}/ — детали одного заказа
 
-Все endpoint-ы требуют аутентификации. Изоляция: пользователь видит
-и оформляет только свои заказы.
+OrderCancelView — команда отмены:
+  POST /api/v1/orders/{uuid}/cancel/ — отменить свой заказ
+
+Все endpoint-ы требуют аутентификации. Изоляция: пользователь
+видит и меняет только свои заказы.
 """
 
 from typing import ClassVar, cast
 
 from django.db.models import Count, QuerySet
+from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -22,14 +26,28 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.common.exceptions import ValidationError
 from apps.orders.api.v1.serializers import (
+    CancelOrderSerializer,
     CheckoutRequestSerializer,
     OrderListSerializer,
     OrderReadSerializer,
 )
-from apps.orders.models import Order
+from apps.orders.models import Order, OrderStatus
 from apps.orders.services.checkout import CheckoutService
+from apps.orders.services.order_status import OrderStatusService
 from apps.users.models import User
+
+# Статусы после которых покупатель не может отменить заказ:
+# товар уже в пути или доставлен, отмена невозможна.
+_STATUSES_FORBIDDEN_FOR_BUYER_CANCEL: frozenset[str] = frozenset(
+    {
+        OrderStatus.SHIPPED,
+        OrderStatus.IN_DELIVERY,
+        OrderStatus.DELIVERED,
+        OrderStatus.CANCELLED,
+    }
+)
 
 
 class OrdersView(APIView):
@@ -37,13 +55,7 @@ class OrdersView(APIView):
     Коллекция заказов пользователя.
 
     POST — оформить заказ через CheckoutService.
-    GET — получить список своих заказов с опциональными фильтрами:
-        ?status=paid
-        ?created_after=2026-01-01
-        ?created_before=2026-12-31
-
-    select_related на seller/warehouse и annotate items_count
-    оптимизируют список от N+1 при рендере страницы.
+    GET — получить список своих заказов с опциональными фильтрами.
     """
 
     permission_classes: ClassVar[list[type[BasePermission]]] = [IsAuthenticated]  # type: ignore[misc]
@@ -71,11 +83,6 @@ class OrdersView(APIView):
         return paginator.get_paginated_response(serializer.data)
 
     def _filtered_queryset(self, request: Request) -> QuerySet[Order]:
-        """
-        Базовый queryset пользователя с фильтрами.
-        Оптимизации: select_related на связанные объекты,
-        annotate для подсчёта позиций в одном SQL.
-        """
         user = cast(User, request.user)
         qs = (
             Order.objects.filter(user=user)
@@ -103,10 +110,8 @@ class OrderDetailView(generics.RetrieveAPIView):
     """
     GET /api/v1/orders/{uuid}/ — детали одного заказа.
 
-    Lookup по uuid (публичный ID, безопаснее чем внутренний id).
-    Возвращаем полный OrderReadSerializer с nested items и warehouse.
-    Изоляция: filter(user=...) не даст доступа к чужим заказам,
-    404 вместо 403 не раскрывает существование чужого заказа.
+    Lookup по uuid. Изоляция: filter(user=...) не даст доступа
+    к чужим заказам, 404 не раскрывает существование чужого заказа.
     """
 
     serializer_class = OrderReadSerializer
@@ -124,3 +129,47 @@ class OrderDetailView(generics.RetrieveAPIView):
                 "items__product__category",
             )
         )
+
+
+class OrderCancelView(APIView):
+    """
+    POST /api/v1/orders/{uuid}/cancel/ — отменить свой заказ.
+
+    Проверки:
+    1. Заказ принадлежит текущему пользователю (иначе 404)
+    2. Статус позволяет отмену покупателем (не после отгрузки)
+
+    OrderStatusService сам:
+    - валидирует переход через граф состояний
+    - обновляет cancelled_at
+    - освобождает reserved_quantity в ProductStock
+    - создаёт запись OrderStatusHistory
+    """
+
+    permission_classes: ClassVar[list[type[BasePermission]]] = [IsAuthenticated]  # type: ignore[misc]
+
+    def post(self, request: Request, uuid: str) -> Response:
+        user = cast(User, request.user)
+        order = get_object_or_404(Order, uuid=uuid, user=user)
+
+        if order.status in _STATUSES_FORBIDDEN_FOR_BUYER_CANCEL:
+            raise ValidationError(
+                error_code="cannot_cancel",
+                message="Заказ нельзя отменить на текущем этапе.",
+                details={"current_status": order.status},
+            )
+
+        serializer = CancelOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        comment = serializer.validated_data.get("comment", "")
+
+        OrderStatusService.change_status(
+            order=order,
+            new_status=OrderStatus.CANCELLED,
+            changed_by=user,
+            comment=comment,
+        )
+
+        order.refresh_from_db()
+        response_serializer = OrderReadSerializer(order, context={"request": request})
+        return Response(response_serializer.data, status=status.HTTP_200_OK)

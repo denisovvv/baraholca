@@ -4,8 +4,11 @@
 CheckoutRequestSerializer — приём тела POST /api/v1/orders/,
 условная валидация по delivery_method (courier vs pickup).
 
-OrderReadSerializer, OrderItemReadSerializer — отдача заказа
-клиенту, с nested product и warehouse.
+CancelOrderSerializer — приём тела POST /api/v1/orders/{uuid}/cancel/,
+опциональный comment для истории статусов.
+
+OrderReadSerializer, OrderItemReadSerializer, OrderListSerializer —
+отдача заказа клиенту в разных форматах.
 """
 
 from typing import Any, ClassVar
@@ -28,9 +31,9 @@ class CheckoutRequestSerializer(serializers.Serializer):
     """
     Приём тела POST /api/v1/orders/.
 
-    Все поля required=False на уровне DRF, условная валидация в validate():
-    для courier обязательны адрес и координаты, для pickup — warehouse_uuid.
-    Лишние поля не отклоняются — сервер использует только нужные.
+    Условная валидация по delivery_method: для courier обязательны
+    адрес и координаты, для pickup — warehouse_uuid. Лишние поля
+    не отклоняются — сервер использует только нужные.
     """
 
     delivery_method = serializers.ChoiceField(choices=DeliveryMethod.choices)
@@ -62,12 +65,23 @@ class CheckoutRequestSerializer(serializers.Serializer):
         return data
 
 
+class CancelOrderSerializer(serializers.Serializer):
+    """
+    Приём тела POST /api/v1/orders/{uuid}/cancel/.
+
+    Комментарий опциональный — попадёт в OrderStatusHistory.comment
+    для аудита причин отмены.
+    """
+
+    comment = serializers.CharField(required=False, allow_blank=True, max_length=1000)
+
+
 class OrderItemReadSerializer(serializers.ModelSerializer):
     """
     Позиция заказа с nested product.
 
-    Snapshot-поля (name, price, sum) отдаются как хранятся — они не
-    меняются после создания заказа даже если Product поменяется.
+    Snapshot-поля (name, price, sum) отдаются как хранятся — они
+    не меняются после создания заказа даже если Product поменяется.
     """
 
     product = ProductListSerializer(read_only=True)
@@ -85,12 +99,7 @@ class OrderItemReadSerializer(serializers.ModelSerializer):
 
 
 class OrderReadSerializer(serializers.ModelSerializer):
-    """
-    Полное представление заказа для клиента.
-
-    Возвращает всю бизнес-информацию: статусы, доставку, оплату, суммы,
-    позиции, склад. Используется в ответе checkout и в GET заказа.
-    """
+    """Полное представление заказа для клиента."""
 
     items = OrderItemReadSerializer(many=True, read_only=True)
     warehouse = WarehouseDetailSerializer(read_only=True)
@@ -135,19 +144,16 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "paid_at",
             "shipped_at",
             "delivered_at",
+            "cancelled_at",
         ]
 
 
 class OrderListSerializer(serializers.ModelSerializer):
     """
-    Короткий формат для списка заказов пользователя.
+    Короткий формат для списка заказов.
 
-    Без items и полного warehouse — только сводная информация:
-    статус, продавец, склад отгрузки, сумма, количество позиций,
-    дата. Клиент по клику откроет detail-endpoint с полными данными.
-
-    items_count передаётся из queryset через annotate — избегаем
-    N+1 при рендере списка из 20 заказов.
+    Без items и полного warehouse — только сводка. Клиент по клику
+    открывает detail. items_count берётся из annotate в queryset.
     """
 
     status_display = serializers.CharField(source="get_status_display", read_only=True)
