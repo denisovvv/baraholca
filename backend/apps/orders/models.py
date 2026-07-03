@@ -17,10 +17,12 @@ on_delete=PROTECT на user/seller/warehouse: заказ переживает у
 """
 
 import uuid as uuid_pkg
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from django.conf import settings
 from django.db import models
+
+from apps.common.exceptions import ValidationError
 
 
 class OrderStatus(models.TextChoices):
@@ -213,6 +215,41 @@ class Order(models.Model):
 
     def __str__(self) -> str:
         return self.number
+
+    def save(self, *args: Any, **kwargs: Any) -> None:  # noqa: ANN401
+        """
+        Валидация перехода статуса перед сохранением.
+
+        Работает при любом save: сервис, админка, прямой save().
+        Читает старый статус из БД одним SELECT, сравнивает с новым.
+        Если статус изменился и переход не разрешён — ValidationError.
+        Новые заказы (без pk) пропускают проверку — им ещё нечего сравнивать.
+        """
+        if self.pk:
+            # Локальный импорт из-за циклической зависимости:
+            # status_transitions импортирует OrderStatus из этого модуля.
+            from apps.orders.services.status_transitions import (  # noqa: PLC0415
+                is_transition_allowed,
+            )
+
+            old = type(self).objects.only("status").get(pk=self.pk)
+            if old.status != self.status:
+                product_type = self._get_product_type_for_transitions()
+                if not is_transition_allowed(old.status, self.status, product_type):
+                    raise ValidationError(
+                        error_code="invalid_transition",
+                        message=f"Недопустимый переход статуса: {old.status} → {self.status}.",
+                    )
+        super().save(*args, **kwargs)
+
+    def _get_product_type_for_transitions(self) -> str:
+        """
+        Определить какой граф переходов использовать.
+        Если хоть один товар made_to_order — используем расширенный граф.
+        Иначе — короткий stock-граф.
+        """
+        has_made_to_order = self.items.filter(product__product_type="made_to_order").exists()
+        return "made_to_order" if has_made_to_order else "stock"
 
 
 class OrderItem(models.Model):
