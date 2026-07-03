@@ -204,6 +204,7 @@ class Order(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True, verbose_name="Оплачен")
     shipped_at = models.DateTimeField(null=True, blank=True, verbose_name="Отгружен")
     delivered_at = models.DateTimeField(null=True, blank=True, verbose_name="Доставлен")
+    cancelled_at = models.DateTimeField(null=True, blank=True, verbose_name="Отменён")
 
     class Meta:
         verbose_name = "Заказ"
