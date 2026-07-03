@@ -136,3 +136,35 @@ class OrderReadSerializer(serializers.ModelSerializer):
             "shipped_at",
             "delivered_at",
         ]
+
+
+class OrderListSerializer(serializers.ModelSerializer):
+    """
+    Короткий формат для списка заказов пользователя.
+
+    Без items и полного warehouse — только сводная информация:
+    статус, продавец, склад отгрузки, сумма, количество позиций,
+    дата. Клиент по клику откроет detail-endpoint с полными данными.
+
+    items_count передаётся из queryset через annotate — избегаем
+    N+1 при рендере списка из 20 заказов.
+    """
+
+    status_display = serializers.CharField(source="get_status_display", read_only=True)
+    seller_name = serializers.CharField(source="seller.short_name", read_only=True)
+    warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
+    items_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields: ClassVar[list[str]] = [
+            "uuid",
+            "number",
+            "status",
+            "status_display",
+            "seller_name",
+            "warehouse_name",
+            "total",
+            "items_count",
+            "created_at",
+        ]
