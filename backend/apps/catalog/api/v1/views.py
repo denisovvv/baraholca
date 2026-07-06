@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db.models import Case, DecimalField, F, QuerySet, When
+from django.db.models import Avg, Case, Count, DecimalField, F, Q, QuerySet, When
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, BasePermission
 
@@ -126,7 +126,15 @@ class ProductListView(generics.ListAPIView):
                     When(discount_price__isnull=False, then=F("discount_price")),
                     default=F("base_price"),
                     output_field=DecimalField(max_digits=12, decimal_places=2),
-                )
+                ),
+                rating_avg=Avg(
+                    "reviews__rating",
+                    filter=Q(reviews__is_published=True),
+                ),
+                reviews_count=Count(
+                    "reviews",
+                    filter=Q(reviews__is_published=True),
+                ),
             )
         )
 

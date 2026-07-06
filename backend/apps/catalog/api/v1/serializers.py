@@ -237,6 +237,8 @@ class ProductListSerializer(serializers.ModelSerializer):
         decimal_places=2,
         read_only=True,
     )
+    rating_avg = serializers.SerializerMethodField()
+    reviews_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = Product
@@ -250,6 +252,8 @@ class ProductListSerializer(serializers.ModelSerializer):
             "discount_price",
             "effective_price",
             "product_type",
+            "rating_avg",
+            "reviews_count",
         ]
 
     def get_main_image_url(self, obj: Product) -> str | None:
@@ -266,6 +270,19 @@ class ProductListSerializer(serializers.ModelSerializer):
         if request:
             return cast(str, request.build_absolute_uri(main.image.url))
         return main.image.url
+
+    def get_rating_avg(self, obj: Product) -> float | None:
+        """
+        Средний балл товара из опубликованных отзывов, округлённый
+        до 1 знака. None, если отзывов нет — фронт покажет "нет отзывов",
+        а не "0.0".
+
+        Значение приходит из аннотации rating_avg в queryset каталога.
+        """
+        value = getattr(obj, "rating_avg", None)
+        if value is None:
+            return None
+        return round(float(value), 1)
 
 
 class ProductDetailSerializer(ProductListSerializer):

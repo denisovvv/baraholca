@@ -7,11 +7,15 @@
 
 from decimal import Decimal
 
+from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 from rest_framework.test import APITestCase
 
 from apps.catalog.models import Category, Product, Warehouse
+from apps.reviews.models import Review
 from apps.sellers.models import Seller
+
+User = get_user_model()
 
 
 class ProductListTests(APITestCase):
@@ -216,3 +220,96 @@ class CategoryTreeTests(APITestCase):
         children = response.data[0]["children"]
         self.assertEqual(len(children), 1)
         self.assertEqual(children[0]["name"], "Керамические")
+
+
+class ProductRatingTests(APITestCase):
+    """Тесты агрегированного рейтинга товара в каталоге."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Тестовый",
+            short_name="Тестовый",
+            inn="123456789012",
+            ogrnip="123456789012345",
+        )
+        self.category = Category.objects.create(name="Кружки")
+        self.user1 = User.objects.create(
+            phone="+79991110001",
+            first_name="Иван",
+            last_name="Петров",
+            phone_verified=True,
+        )
+        self.user2 = User.objects.create(
+            phone="+79992220002",
+            first_name="Сергей",
+            last_name="Сидоров",
+            phone_verified=True,
+        )
+        self.user3 = User.objects.create(
+            phone="+79993330003",
+            first_name="Пётр",
+            last_name="Кузнецов",
+            phone_verified=True,
+        )
+        self.rated = Product.objects.create(
+            name_short="Товар с отзывами",
+            name_full="Товар с отзывами полное",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.no_reviews = Product.objects.create(
+            name_short="Товар без отзывов",
+            name_full="Товар без отзывов полное",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("300.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.url = "/api/v1/catalog/products/"
+
+    def _get_product_data(self, response, name_short):
+        """Найти товар в ответе по name_short."""
+        for item in response.data["results"]:
+            if item["name_short"] == name_short:
+                return item
+        return None
+
+    def test_rating_aggregates_published_reviews(self):
+        """Средний балл и счётчик считаются по опубликованным отзывам."""
+        Review.objects.create(user=self.user1, product=self.rated, rating=5)
+        Review.objects.create(user=self.user2, product=self.rated, rating=4)
+        Review.objects.create(user=self.user3, product=self.rated, rating=3)
+
+        response = self.client.get(self.url)
+        data = self._get_product_data(response, "Товар с отзывами")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(data["rating_avg"], 4.0)
+        self.assertEqual(data["reviews_count"], 3)
+
+    def test_hidden_review_excluded_from_rating(self):
+        """Скрытый отзыв (is_published=False) не влияет на балл и счётчик."""
+        Review.objects.create(user=self.user1, product=self.rated, rating=5)
+        Review.objects.create(user=self.user2, product=self.rated, rating=5)
+        Review.objects.create(user=self.user3, product=self.rated, rating=1, is_published=False)
+
+        response = self.client.get(self.url)
+        data = self._get_product_data(response, "Товар с отзывами")
+
+        # Скрытая единица не учтена: среднее 5.0, счётчик 2
+        self.assertEqual(data["rating_avg"], 5.0)
+        self.assertEqual(data["reviews_count"], 2)
+
+    def test_product_without_reviews_null_rating(self):
+        """Товар без отзывов: rating_avg=None, reviews_count=0."""
+        response = self.client.get(self.url)
+        data = self._get_product_data(response, "Товар без отзывов")
+
+        self.assertIsNone(data["rating_avg"])
+        self.assertEqual(data["reviews_count"], 0)
