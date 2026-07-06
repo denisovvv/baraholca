@@ -44,6 +44,11 @@ class Review(models.Model):
         blank=True,
         verbose_name="Текст отзыва",
     )
+    is_published = models.BooleanField(
+        default=True,
+        verbose_name="Опубликован",
+        help_text="Снимите галочку, чтобы скрыть отзыв от покупателей (модерация).",
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name="Создан",

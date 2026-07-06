@@ -137,8 +137,16 @@ class ReviewEndpointsTestCase(APITestCase):
         )
         return order
 
-    def _create_review(self, user: User, product: Product, rating: int = 5) -> Review:
-        return Review.objects.create(user=user, product=product, rating=rating)
+    def _create_review(
+        self,
+        user: User,
+        product: Product,
+        rating: int = 5,
+        is_published: bool = True,
+    ) -> Review:
+        return Review.objects.create(
+            user=user, product=product, rating=rating, is_published=is_published
+        )
 
     def test_list_public_no_auth(self) -> None:
         """Список отзывов доступен без токена."""
@@ -234,6 +242,15 @@ class ReviewEndpointsTestCase(APITestCase):
             format="json",
         )
         self.assertEqual(response.status_code, 404)
+
+    def test_unpublished_review_hidden_from_list(self) -> None:
+        """Скрытый отзыв (is_published=False) не виден в публичном списке."""
+        self._create_review(self.buyer, self.product_bought, is_published=True)
+        self._create_review(self.other_user, self.product_bought, is_published=False)
+
+        response = self.client.get(self.reviews_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 1)
 
     def test_delete_own_review(self) -> None:
         """Удалить свой отзыв — 204."""

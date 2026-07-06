@@ -21,10 +21,13 @@ class ReviewAdmin(admin.ModelAdmin):
         "user",
         "product",
         "rating",
+        "is_published",
         "created_at",
     )
+    list_editable: ClassVar[tuple[str, ...]] = ("is_published",)
     list_filter: ClassVar[tuple[str, ...]] = (
         "rating",
+        "is_published",
         "created_at",
     )
     search_fields: ClassVar[tuple[str, ...]] = (

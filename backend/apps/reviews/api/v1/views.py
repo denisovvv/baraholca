@@ -54,7 +54,9 @@ class ReviewsView(APIView):
     def get(self, request: Request) -> Response:
         """Список отзывов товара по ?product={id}."""
         product_id = request.query_params.get("product")
-        qs = Review.objects.select_related("user").all()
+        # Публичный список — только опубликованные отзывы (модерация
+        # скрывает неуместные через is_published=False).
+        qs = Review.objects.select_related("user").filter(is_published=True)
         if product_id:
             qs = qs.filter(product_id=product_id)
 
