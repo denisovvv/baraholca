@@ -160,7 +160,7 @@ class CheckoutService:
             user=user,
             seller=seller,
             warehouse=allocation.warehouse,
-            status=OrderStatus.PENDING_PAYMENT,
+            status=OrderStatus.CREATED,
             delivery_method=payload["delivery_method"],
             delivery_address=payload.get("delivery_address", ""),
             delivery_latitude=payload.get("delivery_latitude"),
@@ -194,7 +194,7 @@ class CheckoutService:
         OrderStatusHistory.objects.create(
             order=order,
             status_from="",
-            status_to=OrderStatus.PENDING_PAYMENT,
+            status_to=OrderStatus.CREATED,
             changed_by=None,
             comment="Заказ создан",
             is_automatic=True,

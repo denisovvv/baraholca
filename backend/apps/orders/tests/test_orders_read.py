@@ -99,7 +99,7 @@ class OrdersReadTestCase(APITestCase):
         self,
         user: User,
         number: str = "BX-TST-2026-000001",
-        status: str = OrderStatus.PENDING_PAYMENT,
+        status: str = OrderStatus.CREATED,
     ) -> Order:
         return Order.objects.create(
             number=number,
@@ -152,15 +152,13 @@ class OrdersReadTestCase(APITestCase):
         self.assertEqual(response.data["results"][0]["number"], "BX-TST-2026-000001")
 
     def test_list_filter_by_status(self) -> None:
-        """?status=paid возвращает только оплаченные заказы."""
-        self._create_order(
-            self.user, number="BX-TST-2026-000001", status=OrderStatus.PENDING_PAYMENT
-        )
-        self._create_order(self.user, number="BX-TST-2026-000002", status=OrderStatus.PAID)
-        self._create_order(self.user, number="BX-TST-2026-000003", status=OrderStatus.PAID)
+        """?status=assembling возвращает только заказы в сборке."""
+        self._create_order(self.user, number="BX-TST-2026-000001", status=OrderStatus.CREATED)
+        self._create_order(self.user, number="BX-TST-2026-000002", status=OrderStatus.ASSEMBLING)
+        self._create_order(self.user, number="BX-TST-2026-000003", status=OrderStatus.ASSEMBLING)
 
         self._auth(self.user)
-        response = self.client.get(f"{self.list_url}?status=paid")
+        response = self.client.get(f"{self.list_url}?status=assembling")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 2)

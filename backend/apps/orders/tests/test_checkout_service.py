@@ -143,14 +143,14 @@ class CheckoutServiceTestCase(TestCase):
 
         self.assertEqual(len(orders), 1)
         order = orders[0]
-        self.assertEqual(order.status, OrderStatus.PENDING_PAYMENT)
+        self.assertEqual(order.status, OrderStatus.CREATED)
         self.assertEqual(order.seller, self.seller_a)
         self.assertEqual(order.subtotal, Decimal("1000.00"))
         self.assertEqual(order.total, Decimal("1000.00"))
         self.assertEqual(OrderItem.objects.filter(order=order).count(), 1)
         history = OrderStatusHistory.objects.filter(order=order).first()
         self.assertIsNotNone(history)
-        self.assertEqual(history.status_to, OrderStatus.PENDING_PAYMENT)
+        self.assertEqual(history.status_to, OrderStatus.CREATED)
         self.assertTrue(history.is_automatic)
         stock = ProductStock.objects.get(product=self.product_a1, warehouse=self.warehouse_a1)
         self.assertEqual(stock.reserved_quantity, 2)

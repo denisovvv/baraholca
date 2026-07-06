@@ -30,16 +30,15 @@ class OrderStatus(models.TextChoices):
     Статусы заказа согласно спеке (см. data-model.md → Слой 4).
 
     Разные цепочки для stock-товаров и made_to_order (3D-печать):
-    stock:         pending_payment → paid → assembling → shipped → in_delivery → delivered
-    made_to_order: pending_payment → paid → in_production → produced →
+    stock:         created → assembling → shipped → in_delivery → delivered
+    made_to_order: created → in_production → produced →
                     assembling → shipped → in_delivery → delivered
 
     cancelled возможен на любом этапе до shipped (для stock)
     или до in_production (для made_to_order).
     """
 
-    PENDING_PAYMENT = "pending_payment", "Ожидает оплаты"
-    PAID = "paid", "Оплачен"
+    CREATED = "created", "Создан"
     IN_PRODUCTION = "in_production", "В производстве"
     PRODUCED = "produced", "Изготовлен"
     ASSEMBLING = "assembling", "Собирается"
@@ -54,6 +53,7 @@ class PaymentStatus(models.TextChoices):
 
     PENDING = "pending", "Ожидает оплаты"
     PAID = "paid", "Оплачен"
+    FAILED = "failed", "Не прошла"
     REFUNDED = "refunded", "Возвращён"
 
 
@@ -116,7 +116,7 @@ class Order(models.Model):
     status = models.CharField(
         max_length=30,
         choices=OrderStatus.choices,
-        default=OrderStatus.PENDING_PAYMENT,
+        default=OrderStatus.CREATED,
         verbose_name="Статус",
     )
     payment_status = models.CharField(

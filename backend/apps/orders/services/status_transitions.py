@@ -1,19 +1,22 @@
 """
-State machine для переходов статусов заказа.
+State machine для переходов статусов заказа (физический цикл товара).
 
-Два графа переходов — для stock и made_to_order товаров. Разница
-в наличии стадий in_production/produced для made_to_order.
+Два графа — для stock и made_to_order. Оплата НЕ входит в этот граф:
+она отдельная ось (PaymentStatus). Здесь только физика: где товар.
 
-Чистая функция без побочных эффектов — проверка «разрешён ли
-переход из А в Б». Используется в OrderStatusService.change_status
-и в валидирующем сигнале pre_save.
+stock:         created → assembling → shipped → in_delivery → delivered
+made_to_order: created → in_production → produced → assembling →
+                shipped → in_delivery → delivered
+cancelled — до shipped (stock) или до in_production (made_to_order).
+
+Чистые функции без побочных эффектов. Используются в
+OrderStatusService.change_status и в валидации Order.save().
 """
 
 from apps.orders.models import OrderStatus
 
 STOCK_TRANSITIONS: dict[str, set[str]] = {
-    OrderStatus.PENDING_PAYMENT: {OrderStatus.PAID, OrderStatus.CANCELLED},
-    OrderStatus.PAID: {OrderStatus.ASSEMBLING, OrderStatus.CANCELLED},
+    OrderStatus.CREATED: {OrderStatus.ASSEMBLING, OrderStatus.CANCELLED},
     OrderStatus.ASSEMBLING: {OrderStatus.SHIPPED, OrderStatus.CANCELLED},
     OrderStatus.SHIPPED: {OrderStatus.IN_DELIVERY},
     OrderStatus.IN_DELIVERY: {OrderStatus.DELIVERED},
@@ -22,8 +25,7 @@ STOCK_TRANSITIONS: dict[str, set[str]] = {
 }
 
 MADE_TO_ORDER_TRANSITIONS: dict[str, set[str]] = {
-    OrderStatus.PENDING_PAYMENT: {OrderStatus.PAID, OrderStatus.CANCELLED},
-    OrderStatus.PAID: {OrderStatus.IN_PRODUCTION, OrderStatus.CANCELLED},
+    OrderStatus.CREATED: {OrderStatus.IN_PRODUCTION, OrderStatus.CANCELLED},
     OrderStatus.IN_PRODUCTION: {OrderStatus.PRODUCED, OrderStatus.CANCELLED},
     OrderStatus.PRODUCED: {OrderStatus.ASSEMBLING},
     OrderStatus.ASSEMBLING: {OrderStatus.SHIPPED},

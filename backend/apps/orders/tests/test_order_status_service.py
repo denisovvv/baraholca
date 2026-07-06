@@ -1,8 +1,12 @@
 """
 Integration-тесты OrderStatusService.
 
-Проверяют полный путь смены статуса: валидация → обновление даты →
-освобождение резерва при отмене → запись истории.
+Проверяют путь смены СТАТУСА (физика товара): валидация → обновление
+даты (shipped_at/delivered_at/cancelled_at) → освобождение резерва
+при отмене → запись истории.
+
+Оплата (paid_at, payment_status) — отдельная ось, тестируется
+в test_payment_status_service.
 """
 
 from decimal import Decimal
@@ -102,7 +106,7 @@ class OrderStatusServiceTestCase(TestCase):
         )
 
     def _create_order(
-        self, status: str = OrderStatus.PENDING_PAYMENT, product: Product | None = None
+        self, status: str = OrderStatus.CREATED, product: Product | None = None
     ) -> Order:
         product = product or self.product_stock
         order = Order.objects.create(
@@ -142,19 +146,28 @@ class OrderStatusServiceTestCase(TestCase):
             reserved_quantity=reserved,
         )
 
-    def test_valid_transition_updates_paid_at(self) -> None:
-        """pending_payment → paid обновляет статус и paid_at."""
+    def test_valid_transition_created_to_assembling(self) -> None:
+        """created → assembling обновляет статус."""
         order = self._create_order()
-        self.assertIsNone(order.paid_at)
 
-        OrderStatusService.change_status(order, OrderStatus.PAID, changed_by=self.admin)
+        OrderStatusService.change_status(order, OrderStatus.ASSEMBLING, changed_by=self.admin)
 
         order.refresh_from_db()
-        self.assertEqual(order.status, OrderStatus.PAID)
-        self.assertIsNotNone(order.paid_at)
+        self.assertEqual(order.status, OrderStatus.ASSEMBLING)
+
+    def test_shipped_updates_shipped_at(self) -> None:
+        """Переход в shipped обновляет shipped_at."""
+        order = self._create_order(status=OrderStatus.ASSEMBLING)
+        self.assertIsNone(order.shipped_at)
+
+        OrderStatusService.change_status(order, OrderStatus.SHIPPED)
+
+        order.refresh_from_db()
+        self.assertEqual(order.status, OrderStatus.SHIPPED)
+        self.assertIsNotNone(order.shipped_at)
 
     def test_cancel_updates_cancelled_at(self) -> None:
-        """pending_payment → cancelled обновляет cancelled_at."""
+        """created → cancelled обновляет cancelled_at."""
         order = self._create_order()
 
         OrderStatusService.change_status(order, OrderStatus.CANCELLED, changed_by=self.user)
@@ -164,7 +177,7 @@ class OrderStatusServiceTestCase(TestCase):
         self.assertIsNotNone(order.cancelled_at)
 
     def test_invalid_transition_raises(self) -> None:
-        """pending_payment → shipped запрещён — ValidationError invalid_transition."""
+        """created → shipped запрещён — ValidationError invalid_transition."""
         order = self._create_order()
 
         with self.assertRaises(ValidationError) as ctx:
@@ -183,24 +196,27 @@ class OrderStatusServiceTestCase(TestCase):
         self.assertEqual(stock.reserved_quantity, 0)
 
     def test_history_record_created(self) -> None:
-        """При смене статуса создаётся запись OrderStatusHistory с правильными from/to."""
+        """Смена статуса создаёт запись OrderStatusHistory с from/to."""
         order = self._create_order()
 
         OrderStatusService.change_status(
-            order, OrderStatus.PAID, changed_by=self.admin, comment="Оплачен клиентом"
+            order,
+            OrderStatus.ASSEMBLING,
+            changed_by=self.admin,
+            comment="Начали сборку",
         )
 
         history = OrderStatusHistory.objects.filter(order=order).order_by("-changed_at").first()
         self.assertIsNotNone(history)
-        self.assertEqual(history.status_from, OrderStatus.PENDING_PAYMENT)
-        self.assertEqual(history.status_to, OrderStatus.PAID)
-        self.assertEqual(history.comment, "Оплачен клиентом")
+        self.assertEqual(history.status_from, OrderStatus.CREATED)
+        self.assertEqual(history.status_to, OrderStatus.ASSEMBLING)
+        self.assertEqual(history.comment, "Начали сборку")
 
     def test_no_changed_by_marks_automatic(self) -> None:
         """changed_by=None → is_automatic=True (системный переход)."""
         order = self._create_order()
 
-        OrderStatusService.change_status(order, OrderStatus.PAID)
+        OrderStatusService.change_status(order, OrderStatus.ASSEMBLING)
 
         history = OrderStatusHistory.objects.filter(order=order).order_by("-changed_at").first()
         self.assertTrue(history.is_automatic)
@@ -210,15 +226,15 @@ class OrderStatusServiceTestCase(TestCase):
         """changed_by=user → is_automatic=False, changed_by записан."""
         order = self._create_order()
 
-        OrderStatusService.change_status(order, OrderStatus.PAID, changed_by=self.admin)
+        OrderStatusService.change_status(order, OrderStatus.ASSEMBLING, changed_by=self.admin)
 
         history = OrderStatusHistory.objects.filter(order=order).order_by("-changed_at").first()
         self.assertFalse(history.is_automatic)
         self.assertEqual(history.changed_by, self.admin)
 
-    def test_made_to_order_paid_to_in_production(self) -> None:
-        """made_to_order: paid → in_production разрешён (не в графе stock)."""
-        order = self._create_order(status=OrderStatus.PAID, product=self.product_made)
+    def test_made_to_order_created_to_in_production(self) -> None:
+        """made_to_order: created → in_production разрешён."""
+        order = self._create_order(status=OrderStatus.CREATED, product=self.product_made)
 
         OrderStatusService.change_status(order, OrderStatus.IN_PRODUCTION)
 

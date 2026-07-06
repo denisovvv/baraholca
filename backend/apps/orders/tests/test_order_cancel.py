@@ -94,7 +94,7 @@ class OrderCancelEndpointTestCase(APITestCase):
         token = RefreshToken.for_user(user)
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
 
-    def _create_order(self, user: User, status: str = OrderStatus.PENDING_PAYMENT) -> Order:
+    def _create_order(self, user: User, status: str = OrderStatus.CREATED) -> Order:
         return Order.objects.create(
             number=f"BX-TST-2026-{uuid4().hex[:6]}",
             user=user,
@@ -124,7 +124,7 @@ class OrderCancelEndpointTestCase(APITestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_cancel_own_order_success(self) -> None:
-        """Отмена своего pending_payment заказа — 200, статус cancelled, cancelled_at."""
+        """Отмена своего created заказа — 200, статус cancelled, cancelled_at."""
         order = self._create_order(self.user)
         self._auth(self.user)
 

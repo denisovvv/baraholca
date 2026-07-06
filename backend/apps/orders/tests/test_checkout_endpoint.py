@@ -138,7 +138,7 @@ class CheckoutEndpointTestCase(APITestCase):
         self.assertIn("uuid", order_data)
         self.assertIn("number", order_data)
         self.assertTrue(order_data["number"].startswith("BX-TST-"))
-        self.assertEqual(order_data["status"], "pending_payment")
+        self.assertEqual(order_data["status"], "created")
         self.assertEqual(len(order_data["items"]), 1)
         self.assertEqual(order_data["items"][0]["quantity"], 2)
         self.assertIn("warehouse", order_data)

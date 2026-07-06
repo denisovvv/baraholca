@@ -29,8 +29,9 @@ if TYPE_CHECKING:
     from apps.users.models import User
 
 
+# Только физические даты статусов. paid_at НЕ здесь — оплата
+# отдельная ось (PaymentStatus), её дату ставит PaymentStatusService.
 _STATUS_TO_DATE_FIELD: dict[str, str] = {
-    OrderStatus.PAID: "paid_at",
     OrderStatus.SHIPPED: "shipped_at",
     OrderStatus.DELIVERED: "delivered_at",
     OrderStatus.CANCELLED: "cancelled_at",
