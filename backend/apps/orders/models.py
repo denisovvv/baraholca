@@ -360,3 +360,58 @@ class OrderStatusHistory(models.Model):
 
     def __str__(self) -> str:
         return f"{self.order.number}: {self.status_from} → {self.status_to}"
+
+
+class PaymentStatusHistory(models.Model):
+    """
+    История смены статусов оплаты заказа.
+
+    Симметрична OrderStatusHistory, но для оси оплаты (payment_status).
+    Каждая запись — переход pending → paid / failed / refunded с указанием
+    кто и когда. Отдельная таблица, потому что оплата и физический статус —
+    две независимые оси жизненного цикла заказа.
+    """
+
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.CASCADE,
+        related_name="payment_history",
+        verbose_name="Заказ",
+    )
+    status_from = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name="Предыдущий статус оплаты",
+    )
+    status_to = models.CharField(
+        max_length=20,
+        verbose_name="Новый статус оплаты",
+    )
+    changed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payment_status_changes",
+        verbose_name="Кем изменён",
+    )
+    changed_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Когда изменён",
+    )
+    comment = models.TextField(
+        blank=True,
+        verbose_name="Комментарий",
+    )
+    is_automatic = models.BooleanField(
+        default=False,
+        verbose_name="Изменён автоматически",
+    )
+
+    class Meta:
+        verbose_name = "История оплаты"
+        verbose_name_plural = "История оплат"
+        ordering: ClassVar[list[str]] = ["-changed_at"]
+
+    def __str__(self) -> str:
+        return f"{self.order.number}: {self.status_from} → {self.status_to}"
