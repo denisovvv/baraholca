@@ -21,7 +21,7 @@ from django.db.models import Count, QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.pagination import PageNumberPagination
-from rest_framework.permissions import BasePermission, IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAdminUser, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -33,9 +33,10 @@ from apps.orders.api.v1.serializers import (
     OrderListSerializer,
     OrderReadSerializer,
 )
-from apps.orders.models import Order, OrderStatus
+from apps.orders.models import Order, OrderStatus, PaymentStatus
 from apps.orders.services.checkout import CheckoutService
 from apps.orders.services.order_status import OrderStatusService
+from apps.orders.services.payment_status import PaymentStatusService
 from apps.users.models import User
 
 # Статусы после которых покупатель не может отменить заказ:
@@ -173,3 +174,33 @@ class OrderCancelView(APIView):
         order.refresh_from_db()
         response_serializer = OrderReadSerializer(order, context={"request": request})
         return Response(response_serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderMarkPaidView(APIView):
+    """
+    POST /api/v1/orders/{uuid}/mark-paid/ — отметить заказ оплаченным.
+
+    Заглушка вместо webhook эквайринга (пока его нет). Доступ только
+    для is_staff (продавец/админ отмечает оплату вручную). В будущем
+    заменится на автоматический webhook банка.
+
+    PaymentStatusService валидирует переход, ставит paid_at,
+    пишет PaymentStatusHistory. Изоляции по user нет — staff
+    работает с любым заказом.
+    """
+
+    permission_classes: ClassVar[list[type[BasePermission]]] = [IsAdminUser]  # type: ignore[misc]
+
+    def post(self, request: Request, uuid: str) -> Response:
+        order = get_object_or_404(Order, uuid=uuid)
+
+        PaymentStatusService.change_payment_status(
+            order=order,
+            new_status=PaymentStatus.PAID,
+            changed_by=cast(User, request.user),
+            comment="Отмечено вручную (mark-paid)",
+        )
+
+        order.refresh_from_db()
+        serializer = OrderReadSerializer(order, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
