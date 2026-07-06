@@ -22,7 +22,12 @@ from django.contrib import admin
 from django.db import models
 from django.http import HttpRequest
 
-from apps.orders.models import Order, OrderItem, OrderStatusHistory
+from apps.orders.models import (
+    Order,
+    OrderItem,
+    OrderStatusHistory,
+    PaymentStatusHistory,
+)
 
 
 class OrderItemInline(admin.TabularInline):
@@ -78,6 +83,36 @@ class OrderStatusHistoryInline(admin.TabularInline):
         return False
 
 
+class PaymentStatusHistoryInline(admin.TabularInline):
+    """
+    История оплаты внутри страницы Order.
+
+    Симметрична OrderStatusHistoryInline, но для оси оплаты.
+    Аудитный лог, только чтение.
+    """
+
+    model = PaymentStatusHistory
+    extra = 0
+    can_delete = False
+    readonly_fields: ClassVar[tuple[str, ...]] = (
+        "status_from",
+        "status_to",
+        "changed_by",
+        "changed_at",
+        "comment",
+        "is_automatic",
+    )
+    show_change_link = True
+
+    def has_add_permission(
+        self,
+        request: HttpRequest,
+        obj: Order | None = None,
+    ) -> bool:
+        """Запретить создание истории оплаты через админку."""
+        return False
+
+
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     """
@@ -125,6 +160,7 @@ class OrderAdmin(admin.ModelAdmin):
         "paid_at",
         "shipped_at",
         "delivered_at",
+        "cancelled_at",
         "docnum_1c",
         "synced_at_1c",
     )
@@ -137,6 +173,7 @@ class OrderAdmin(admin.ModelAdmin):
     inlines: ClassVar[list[type[admin.TabularInline]]] = [  # type: ignore[assignment]
         OrderItemInline,
         OrderStatusHistoryInline,
+        PaymentStatusHistoryInline,
     ]
 
     fieldsets: ClassVar[tuple[tuple[str, dict[str, tuple[str, ...]]], ...]] = (  # type: ignore[assignment]
@@ -183,6 +220,7 @@ class OrderAdmin(admin.ModelAdmin):
                     "paid_at",
                     "shipped_at",
                     "delivered_at",
+                    "cancelled_at",
                 ),
                 "classes": ("collapse",),
             },
@@ -284,6 +322,57 @@ class OrderStatusHistoryAdmin(admin.ModelAdmin):
         self,
         request: HttpRequest,
         obj: OrderStatusHistory | None = None,
+    ) -> bool:
+        """Аудитный лог не редактируется."""
+        return False
+
+
+@admin.register(PaymentStatusHistory)
+class PaymentStatusHistoryAdmin(admin.ModelAdmin):
+    """
+    Аудитный лог смены статусов оплаты.
+
+    Симметричен OrderStatusHistoryAdmin, но для оси оплаты.
+    Все поля readonly — историю нельзя редактировать.
+    """
+
+    list_display: ClassVar[tuple[str, ...]] = (  # type: ignore[misc]
+        "order",
+        "status_from",
+        "status_to",
+        "changed_by",
+        "changed_at",
+        "is_automatic",
+    )
+    list_filter: ClassVar[tuple[str, ...]] = (
+        "status_to",
+        "is_automatic",
+        "changed_at",
+    )
+    search_fields: ClassVar[tuple[str, ...]] = (
+        "order__number",
+        "changed_by__phone",
+        "comment",
+    )
+    readonly_fields: ClassVar[tuple[str, ...]] = (
+        "order",
+        "status_from",
+        "status_to",
+        "changed_by",
+        "changed_at",
+        "comment",
+        "is_automatic",
+    )
+    autocomplete_fields: ClassVar[tuple[str, ...]] = ("order", "changed_by")
+
+    def has_add_permission(self, request: HttpRequest) -> bool:
+        """Записи истории создаются только автоматически, не через админку."""
+        return False
+
+    def has_change_permission(
+        self,
+        request: HttpRequest,
+        obj: PaymentStatusHistory | None = None,
     ) -> bool:
         """Аудитный лог не редактируется."""
         return False
