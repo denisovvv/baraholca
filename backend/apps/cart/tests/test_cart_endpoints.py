@@ -357,3 +357,61 @@ class CartEndpointsTests(APITestCase):
         response_b = self.client.get(self.cart_url)
         self.assertEqual(response_b.status_code, 200)
         self.assertEqual(response_b.data["total_quantity"], 5)
+
+    def test_total_sums_available_items(self) -> None:
+        """total = сумма (цена x количество) по доступным позициям."""
+        cart = Cart.objects.create(user=self.user)
+        CartItem.objects.create(cart=cart, product=self.active_product, quantity=2)
+        self._auth(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(response.status_code, 200)
+        # Кружка 500 x 2 = 1000
+        self.assertEqual(response.data["total"], Decimal("1000.00"))
+        self.assertEqual(response.data["total_items_count"], 1)
+
+    def test_total_excludes_unavailable_items(self) -> None:
+        """Недоступные товары НЕ входят в total и total_items_count."""
+        cart = Cart.objects.create(user=self.user)
+        CartItem.objects.create(cart=cart, product=self.active_product, quantity=2)
+        CartItem.objects.create(cart=cart, product=self.inactive_product, quantity=3)
+        CartItem.objects.create(cart=cart, product=self.unavailable_product, quantity=5)
+        self._auth(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        # Только кружка 500 x 2 = 1000; тарелка и блюдце исключены
+        self.assertEqual(response.data["total"], Decimal("1000.00"))
+        self.assertEqual(response.data["total_items_count"], 1)
+
+    def test_total_uses_discount_price(self) -> None:
+        """Товар со скидкой считается по скидочной цене."""
+        discounted = Product.objects.create(
+            name_short="Чайник",
+            name_full="Чайник со скидкой",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("1000.00"),
+            discount_price=Decimal("700.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        cart = Cart.objects.create(user=self.user)
+        CartItem.objects.create(cart=cart, product=discounted, quantity=2)
+        self._auth(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        # Скидочная 700 x 2 = 1400 (не базовая 1000 x 2)
+        self.assertEqual(response.data["total"], Decimal("1400.00"))
+
+    def test_empty_cart_total_is_zero(self) -> None:
+        """Пустая корзина: total = 0.00, total_items_count = 0."""
+        self._auth(self.user)
+
+        response = self.client.get(self.cart_url)
+
+        self.assertEqual(response.data["total"], Decimal("0.00"))
+        self.assertEqual(response.data["total_items_count"], 0)
