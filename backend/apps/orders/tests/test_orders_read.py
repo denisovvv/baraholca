@@ -100,6 +100,7 @@ class OrdersReadTestCase(APITestCase):
         user: User,
         number: str = "BX-TST-2026-000001",
         status: str = OrderStatus.CREATED,
+        payment_status: str = PaymentStatus.PENDING,
     ) -> Order:
         return Order.objects.create(
             number=number,
@@ -107,7 +108,7 @@ class OrdersReadTestCase(APITestCase):
             seller=self.seller,
             warehouse=self.warehouse,
             status=status,
-            payment_status=PaymentStatus.PENDING,
+            payment_status=payment_status,
             delivery_method=DeliveryMethod.COURIER,
             delivery_address="г.Тестовый, ул.Ленина 1",
             delivery_latitude=Decimal("52.9"),
@@ -150,6 +151,42 @@ class OrdersReadTestCase(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["count"], 1)
         self.assertEqual(response.data["results"][0]["number"], "BX-TST-2026-000001")
+
+    def test_list_returns_both_status_axes(self) -> None:
+        """Список отдаёт физический статус И статус оплаты (две оси)."""
+        self._create_order(
+            self.user,
+            number="BX-TST-2026-000042",
+            status=OrderStatus.ASSEMBLING,
+            payment_status=PaymentStatus.PENDING,
+        )
+        self._auth(self.user)
+
+        response = self.client.get(self.list_url)
+        order_data = response.data["results"][0]
+
+        # Физическая ось
+        self.assertEqual(order_data["status"], OrderStatus.ASSEMBLING)
+        self.assertEqual(order_data["status_display"], "Собирается")
+        # Ось оплаты
+        self.assertEqual(order_data["payment_status"], PaymentStatus.PENDING)
+        self.assertEqual(order_data["payment_status_display"], "Ожидает оплаты")
+
+    def test_list_shows_paid_status(self) -> None:
+        """Оплаченный заказ: payment_status_display = 'Оплачен'."""
+        self._create_order(
+            self.user,
+            number="BX-TST-2026-000037",
+            status=OrderStatus.DELIVERED,
+            payment_status=PaymentStatus.PAID,
+        )
+        self._auth(self.user)
+
+        response = self.client.get(self.list_url)
+        order_data = response.data["results"][0]
+
+        self.assertEqual(order_data["payment_status"], PaymentStatus.PAID)
+        self.assertEqual(order_data["payment_status_display"], "Оплачен")
 
     def test_list_filter_by_status(self) -> None:
         """?status=assembling возвращает только заказы в сборке."""

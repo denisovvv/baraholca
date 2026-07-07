@@ -157,6 +157,9 @@ class OrderListSerializer(serializers.ModelSerializer):
     """
 
     status_display = serializers.CharField(source="get_status_display", read_only=True)
+    payment_status_display = serializers.CharField(
+        source="get_payment_status_display", read_only=True
+    )
     seller_name = serializers.CharField(source="seller.short_name", read_only=True)
     warehouse_name = serializers.CharField(source="warehouse.name", read_only=True)
     items_count = serializers.IntegerField(read_only=True)
@@ -168,6 +171,8 @@ class OrderListSerializer(serializers.ModelSerializer):
             "number",
             "status",
             "status_display",
+            "payment_status",
+            "payment_status_display",
             "seller_name",
             "warehouse_name",
             "total",
