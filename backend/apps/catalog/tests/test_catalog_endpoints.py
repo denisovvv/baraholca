@@ -15,6 +15,7 @@ from apps.catalog.models import (
     Category,
     Product,
     ProductCharacteristic,
+    ProductGroup,
     Warehouse,
 )
 from apps.reviews.models import Review
@@ -564,3 +565,92 @@ class SimilarProductsTests(APITestCase):
         """Несуществующий товар — 404."""
         response = self.client.get(self._url(999999))
         self.assertEqual(response.status_code, 404)
+
+
+class ProductVariantsTests(APITestCase):
+    """Тесты вариантов товара на карточке (группа вариантов)."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Иванов",
+            short_name="Иванов",
+            inn="123456789012",
+            ogrnip="123456789012345",
+            order_prefix="PVA",
+        )
+        # Группа вариантов "Чехол iPhone 11 Pro Max"
+        self.group = ProductGroup.objects.create(name="Чехол iPhone 11 Pro Max")
+
+        # Вариант жёлтый (своя цена)
+        self.yellow = Product.objects.create(
+            name_short="Чехол жёлтый",
+            name_full="Чехол iPhone 11 Pro Max жёлтый",
+            seller=self.seller,
+            group=self.group,
+            variant_color="Жёлтый",
+            base_price=Decimal("1500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Вариант голубой (другая цена)
+        self.blue = Product.objects.create(
+            name_short="Чехол голубой",
+            name_full="Чехол iPhone 11 Pro Max голубой",
+            seller=self.seller,
+            group=self.group,
+            variant_color="Голубой",
+            base_price=Decimal("1600.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Товар без группы (без вариантов)
+        self.standalone = Product.objects.create(
+            name_short="Кружка",
+            name_full="Кружка обычная",
+            seller=self.seller,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+
+    def _detail(self, product_id):
+        return self.client.get(f"/api/v1/catalog/products/{product_id}/")
+
+    def test_variants_include_all_group_products(self):
+        """Карточка варианта отдаёт все варианты группы, включая себя."""
+        response = self._detail(self.yellow.id)
+        self.assertEqual(response.status_code, 200)
+        variants = response.data["variants"]
+        ids = {v["id"] for v in variants}
+        self.assertIn(self.yellow.id, ids)
+        self.assertIn(self.blue.id, ids)
+        self.assertEqual(len(variants), 2)
+
+    def test_variant_has_color_and_price(self):
+        """Вариант содержит цвет и свою цену."""
+        response = self._detail(self.yellow.id)
+        variants = {v["variant_color"]: v for v in response.data["variants"]}
+        self.assertEqual(variants["Жёлтый"]["effective_price"], "1500.00")
+        self.assertEqual(variants["Голубой"]["effective_price"], "1600.00")
+
+    def test_variant_has_availability(self):
+        """Вариант содержит флаг доступности."""
+        response = self._detail(self.yellow.id)
+        for v in response.data["variants"]:
+            self.assertIn("is_available", v)
+            self.assertTrue(v["is_available"])
+
+    def test_variants_sorted_by_id(self):
+        """Варианты отсортированы по id."""
+        response = self._detail(self.yellow.id)
+        ids = [v["id"] for v in response.data["variants"]]
+        self.assertEqual(ids, sorted(ids))
+
+    def test_product_without_group_empty_variants(self):
+        """Товар без группы — пустой список вариантов."""
+        response = self._detail(self.standalone.id)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["variants"], [])

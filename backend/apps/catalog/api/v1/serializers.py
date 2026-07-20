@@ -297,6 +297,51 @@ class ProductCharacteristicSerializer(serializers.ModelSerializer):
         ]
 
 
+class ProductVariantSerializer(serializers.ModelSerializer):
+    """
+    Компактное представление варианта товара для переключателя на
+    карточке. Каждый вариант — отдельный товар (Product) со своей
+    ценой, доступностью и атрибутами (цвет/размер).
+    """
+
+    effective_price = serializers.DecimalField(
+        source="get_effective_price",
+        max_digits=12,
+        decimal_places=2,
+        read_only=True,
+    )
+    main_image_url = serializers.SerializerMethodField()
+    is_available = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Product
+        fields: ClassVar[list[str]] = [
+            "id",
+            "name_short",
+            "variant_color",
+            "variant_size",
+            "effective_price",
+            "main_image_url",
+            "is_available",
+        ]
+
+    def get_main_image_url(self, obj: Product) -> str | None:
+        """URL главного фото варианта."""
+        main = obj.images.filter(is_main=True).first()
+        if not main:
+            main = obj.images.first()
+        if not main:
+            return None
+        request = self.context.get("request")
+        if request:
+            return cast(str, request.build_absolute_uri(main.image.url))
+        return main.image.url
+
+    def get_is_available(self, obj: Product) -> bool:
+        """Доступен ли вариант к покупке."""
+        return obj.is_active and obj.is_available_for_sale
+
+
 class ProductDetailSerializer(ProductListSerializer):
     """
     Полное представление товара для карточки.
@@ -305,6 +350,7 @@ class ProductDetailSerializer(ProductListSerializer):
     images = ProductImageSerializer(many=True, read_only=True)
     stocks = ProductStockSerializer(many=True, read_only=True)
     characteristics = ProductCharacteristicSerializer(many=True, read_only=True)
+    variants = serializers.SerializerMethodField()
 
     class Meta(ProductListSerializer.Meta):
         fields: ClassVar[list[str]] = [
@@ -315,4 +361,24 @@ class ProductDetailSerializer(ProductListSerializer):
             "images",
             "stocks",
             "characteristics",
+            "variants",
         ]
+
+    def get_variants(self, obj: Product) -> list[dict[str, object]]:
+        """
+        Варианты того же товара (другие цвета/размеры) для переключателя.
+
+        Если товар входит в группу — возвращаем все товары группы,
+        включая текущий (фронт подсветит выбранный), отсортированные
+        по id. Если группы нет (товар без вариантов) — пустой список.
+        """
+        group = obj.group
+        if group is None:
+            return []
+        variants = group.variants.order_by("id")
+        serialized = ProductVariantSerializer(
+            variants,
+            many=True,
+            context=self.context,
+        )
+        return list(serialized.data)
