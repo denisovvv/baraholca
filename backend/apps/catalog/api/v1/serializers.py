@@ -254,6 +254,7 @@ class ProductListSerializer(serializers.ModelSerializer):
     )
     rating_avg = serializers.SerializerMethodField()
     reviews_count = serializers.IntegerField(read_only=True)
+    variants_count = serializers.SerializerMethodField()
 
     class Meta:
         model = Product
@@ -269,6 +270,7 @@ class ProductListSerializer(serializers.ModelSerializer):
             "product_type",
             "rating_avg",
             "reviews_count",
+            "variants_count",
         ]
 
     def get_main_image_url(self, obj: Product) -> str | None:
@@ -285,6 +287,19 @@ class ProductListSerializer(serializers.ModelSerializer):
         if request:
             return cast(str, request.build_absolute_uri(main.image.url))
         return main.image.url
+
+    def get_variants_count(self, obj: Product) -> int:
+        """
+        Число вариантов в группе товара (для пометки "есть варианты").
+
+        Если товар входит в группу — сколько всего товаров в группе
+        (включая его). Если группы нет — 0 (нет вариантов).
+        Фронт показывает пометку "+N цветов" при variants_count > 1.
+        """
+        group_id = obj.group_id
+        if group_id is None:
+            return 0
+        return Product.objects.filter(group_id=group_id).count()
 
     def get_rating_avg(self, obj: Product) -> float | None:
         """

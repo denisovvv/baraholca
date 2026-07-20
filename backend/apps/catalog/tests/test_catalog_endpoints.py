@@ -852,3 +852,96 @@ class ProductFilterExtendedTests(APITestCase):
         results = response.data["results"]
         # Последний созданный (rated_high) — первый
         self.assertEqual(results[0]["name_short"], "Рейтинг высокий")
+
+
+class CatalogVariantCollapseTests(APITestCase):
+    """Схлопывание вариантов в каталоге: группа = одна карточка."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Иванов",
+            short_name="Иванов",
+            inn="123456789012",
+            ogrnip="123456789012345",
+            order_prefix="CVC",
+        )
+        self.group = ProductGroup.objects.create(name="Чехол iPhone 11")
+
+        # Три варианта одной группы (первый по id — представитель)
+        self.variant1 = Product.objects.create(
+            name_short="Чехол жёлтый",
+            name_full="Чехол жёлтый",
+            seller=self.seller,
+            group=self.group,
+            variant_color="Жёлтый",
+            base_price=Decimal("1500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.variant2 = Product.objects.create(
+            name_short="Чехол голубой",
+            name_full="Чехол голубой",
+            seller=self.seller,
+            group=self.group,
+            variant_color="Голубой",
+            base_price=Decimal("1600.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.variant3 = Product.objects.create(
+            name_short="Чехол красный",
+            name_full="Чехол красный",
+            seller=self.seller,
+            group=self.group,
+            variant_color="Красный",
+            base_price=Decimal("1700.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Обычный товар без группы
+        self.standalone = Product.objects.create(
+            name_short="Кружка",
+            name_full="Кружка",
+            seller=self.seller,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.url = "/api/v1/catalog/products/"
+
+    def test_group_collapsed_to_one_card(self):
+        """Группа вариантов показывается одной карточкой в каталоге."""
+        response = self.client.get(self.url)
+        ids = {item["id"] for item in response.data["results"]}
+        # Представитель (первый по id) есть
+        self.assertIn(self.variant1.id, ids)
+        # Остальные варианты схлопнуты (не в каталоге)
+        self.assertNotIn(self.variant2.id, ids)
+        self.assertNotIn(self.variant3.id, ids)
+
+    def test_standalone_product_shown(self):
+        """Товар без группы показывается как обычно."""
+        response = self.client.get(self.url)
+        ids = {item["id"] for item in response.data["results"]}
+        self.assertIn(self.standalone.id, ids)
+
+    def test_representative_has_variants_count(self):
+        """Представитель показывает число вариантов группы."""
+        response = self.client.get(self.url)
+        rep = next(item for item in response.data["results"] if item["id"] == self.variant1.id)
+        self.assertEqual(rep["variants_count"], 3)
+
+    def test_standalone_variants_count_zero(self):
+        """Товар без группы: variants_count = 0."""
+        response = self.client.get(self.url)
+        item = next(item for item in response.data["results"] if item["id"] == self.standalone.id)
+        self.assertEqual(item["variants_count"], 0)
+
+    def test_catalog_total_count(self):
+        """В каталоге: 1 представитель группы + 1 обычный = 2 карточки."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.data["count"], 2)

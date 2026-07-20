@@ -6,7 +6,7 @@ from typing import ClassVar
 
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
-from django.db.models import Avg, Case, Count, DecimalField, F, Q, QuerySet, When
+from django.db.models import Avg, Case, Count, DecimalField, F, Min, Q, QuerySet, When
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
@@ -161,8 +161,22 @@ class ProductListView(generics.ListAPIView):
     ordering: ClassVar[list[str]] = ["name_short"]  # сортировка по умолчанию
 
     def get_queryset(self) -> QuerySet[Product]:
-        """Товары, видимые в каталоге, с аннотациями цены и рейтинга."""
-        return get_catalog_queryset()
+        """
+        Товары каталога со схлопыванием вариантов.
+
+        Товары с группой вариантов схлопываются в одну карточку:
+        показывается только представитель группы (первый по id), чтобы
+        каталог не засорялся дублями цветов/размеров. Товары без группы
+        (group=null) показываются как есть.
+
+        Представитель — товар, чей id равен минимальному id среди
+        вариантов его группы.
+        """
+        return (
+            get_catalog_queryset()
+            .annotate(group_min_id=Min("group__variants__id"))
+            .filter(Q(group__isnull=True) | Q(id=F("group_min_id")))
+        )
 
 
 class WarehouseNearbyView(generics.ListAPIView):
