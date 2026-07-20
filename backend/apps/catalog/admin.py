@@ -15,6 +15,7 @@ from apps.catalog.models import (
     Category,
     Product,
     ProductCharacteristic,
+    ProductGroup,
     ProductImage,
     ProductStock,
     Warehouse,
@@ -192,6 +193,7 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = (
         "seller",
         "category",
+        "group",
         "product_type",
         "is_available_for_sale",
         "is_active",
@@ -203,7 +205,7 @@ class ProductAdmin(admin.ModelAdmin):
         "uuid_1c",
     )
     list_editable = ("is_active",)
-    autocomplete_fields = ("seller", "category")
+    autocomplete_fields = ("seller", "category", "group")
     readonly_fields = (
         "uuid_1c",
         "created_at",
@@ -418,3 +420,47 @@ class ProductStockAdmin(admin.ModelAdmin):
         """
         obj.full_clean()
         super().save_model(request, obj, form, change)
+
+
+class ProductVariantInline(admin.TabularInline):
+    """
+    Read-only обзор вариантов на странице группы.
+
+    Показывает товары, входящие в группу (их цвет/размер/цену), но НЕ
+    редактируется здесь: привязка к группе и атрибуты варианта задаются
+    в карточке самого товара (ProductAdmin). Здесь — только обзор.
+    """
+
+    model = Product
+    fk_name = "group"
+    extra = 0
+    can_delete = False
+    show_change_link = True
+    fields = ("name_short", "variant_color", "variant_size", "base_price")
+    readonly_fields = ("name_short", "variant_color", "variant_size", "base_price")
+
+    def has_add_permission(self, request: object, obj: object = None) -> bool:
+        """Нельзя добавлять варианты отсюда — только обзор."""
+        return False
+
+
+@admin.register(ProductGroup)
+class ProductGroupAdmin(admin.ModelAdmin):
+    """
+    Группы вариантов товара.
+
+    Заказчик создаёт группу (например "Чехол iPhone 11 Pro Max"), затем
+    в карточках товаров-вариантов привязывает их к этой группе и
+    проставляет цвет/размер. Здесь виден обзор входящих вариантов.
+    """
+
+    list_display = ("name", "variants_count", "is_active", "created_at")
+    list_filter = ("is_active",)
+    search_fields = ("name", "description")
+    inlines: ClassVar[list[type[admin.TabularInline]]] = [ProductVariantInline]  # type: ignore[assignment]
+    readonly_fields = ("created_at", "updated_at")
+
+    @admin.display(description="Вариантов")
+    def variants_count(self, obj: ProductGroup) -> int:
+        """Сколько товаров привязано к группе."""
+        return obj.variants.count()
