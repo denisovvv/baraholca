@@ -7,6 +7,7 @@ from typing import ClassVar
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Avg, Case, Count, DecimalField, F, Q, QuerySet, When
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, BasePermission
@@ -130,6 +131,13 @@ def get_catalog_queryset() -> QuerySet[Product]:
                 "reviews",
                 filter=Q(reviews__is_published=True),
             ),
+            rating_sort=Coalesce(
+                Avg(
+                    "reviews__rating",
+                    filter=Q(reviews__is_published=True),
+                ),
+                0.0,
+            ),
         )
     )
 
@@ -143,7 +151,12 @@ class ProductListView(generics.ListAPIView):
     permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
     filterset_class = ProductFilter
     search_fields: ClassVar[list[str]] = ["name_short", "name_full"]
-    ordering_fields: ClassVar[list[str]] = ["effective_price_anno", "name_short"]
+    ordering_fields: ClassVar[list[str]] = [
+        "effective_price_anno",
+        "name_short",
+        "rating_sort",
+        "created_at",
+    ]
     ordering: ClassVar[list[str]] = ["name_short"]  # сортировка по умолчанию
 
     def get_queryset(self) -> QuerySet[Product]:

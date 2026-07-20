@@ -759,3 +759,96 @@ class ProductSuggestTests(APITestCase):
         response = self.client.get(self.url, {"q": "чехол"})
         item = response.data[0]
         self.assertEqual(set(item.keys()), {"id", "name_short"})
+
+
+class ProductFilterExtendedTests(APITestCase):
+    """Тесты расширенных фильтров: тип, рейтинг, скидка, сортировки."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Иванов",
+            short_name="Иванов",
+            inn="123456789012",
+            ogrnip="123456789012345",
+            order_prefix="FLT",
+        )
+        self.category = Category.objects.create(name="Разное")
+        self.user = get_user_model().objects.create(
+            phone="+79991112200",
+            first_name="Иван",
+            last_name="Петров",
+            phone_verified=True,
+        )
+
+        # Товар со скидкой, тип stock
+        self.discounted = Product.objects.create(
+            name_short="Со скидкой",
+            name_full="Товар со скидкой",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("1000.00"),
+            discount_price=Decimal("700.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Товар без скидки, тип made_to_order (под заказ)
+        self.made = Product.objects.create(
+            name_short="Под заказ",
+            name_full="Товар под заказ",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("2000.00"),
+            product_type="made_to_order",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Товар с высоким рейтингом
+        self.rated_high = Product.objects.create(
+            name_short="Рейтинг высокий",
+            name_full="Товар с высоким рейтингом",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        Review.objects.create(user=self.user, product=self.rated_high, rating=5, is_published=True)
+        self.url = "/api/v1/catalog/products/"
+
+    def test_filter_by_product_type(self):
+        """Фильтр по типу товара (под заказ)."""
+        response = self.client.get(self.url, {"product_type": "made_to_order"})
+        names = {item["name_short"] for item in response.data["results"]}
+        self.assertIn("Под заказ", names)
+        self.assertNotIn("Со скидкой", names)
+
+    def test_filter_has_discount(self):
+        """Фильтр только со скидкой."""
+        response = self.client.get(self.url, {"has_discount": "true"})
+        names = {item["name_short"] for item in response.data["results"]}
+        self.assertIn("Со скидкой", names)
+        self.assertNotIn("Под заказ", names)
+
+    def test_filter_rating_min(self):
+        """Фильтр по минимальному рейтингу."""
+        response = self.client.get(self.url, {"rating_min": "4"})
+        names = {item["name_short"] for item in response.data["results"]}
+        self.assertIn("Рейтинг высокий", names)
+        # Товары без отзывов не проходят фильтр рейтинга
+        self.assertNotIn("Со скидкой", names)
+
+    def test_ordering_by_rating(self):
+        """Сортировка по рейтингу (сначала высокий, без рейтинга — вниз)."""
+        response = self.client.get(self.url, {"ordering": "-rating_sort"})
+        results = response.data["results"]
+        # Товар с рейтингом 5 первый; товары без отзывов (rating_sort=0) внизу
+        self.assertEqual(results[0]["name_short"], "Рейтинг высокий")
+
+    def test_ordering_by_newest(self):
+        """Сортировка по новизне (сначала новые)."""
+        response = self.client.get(self.url, {"ordering": "-created_at"})
+        results = response.data["results"]
+        # Последний созданный (rated_high) — первый
+        self.assertEqual(results[0]["name_short"], "Рейтинг высокий")
