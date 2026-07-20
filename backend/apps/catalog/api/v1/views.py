@@ -24,6 +24,7 @@ from apps.catalog.api.v1.serializers import (
 )
 from apps.catalog.models import Category, Product, Warehouse
 from apps.common.exceptions import ValidationError
+from apps.orders.models import OrderItem, OrderStatus
 
 # Допустимые диапазоны географических координат (WGS84, SRID 4326).
 LATITUDE_MIN = -90.0
@@ -341,4 +342,52 @@ class ProductSuggestView(generics.ListAPIView):
                 Q(name_short__icontains=query) | Q(name_full__icontains=query),
             )
             .order_by("name_short")[: self.SUGGEST_LIMIT]
+        )
+
+
+class BoughtTogetherView(generics.ListAPIView):
+    """
+    Товары, которые покупают вместе с текущим — блок "Покупают вместе".
+
+    Аналитика по доставленным заказам: находим заказы (status=delivered),
+    где есть текущий товар, берём другие товары из этих заказов и
+    сортируем по частоте совместных покупок. Топ-20.
+
+    Если совместных покупок нет (мало заказов) — пустой список.
+    """
+
+    serializer_class = ProductListSerializer
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
+    pagination_class = None
+
+    BOUGHT_TOGETHER_LIMIT = 20
+
+    def get_queryset(self) -> QuerySet[Product]:
+        """
+        Товары из доставленных заказов, содержащих текущий товар,
+        кроме него самого, отсортированные по частоте совместных покупок.
+        """
+        product = get_object_or_404(Product, pk=self.kwargs["product_id"])
+        # id доставленных заказов, где есть текущий товар.
+        order_ids = (
+            OrderItem.objects.filter(
+                product_id=product.pk,
+                order__status=OrderStatus.DELIVERED,
+            )
+            .values_list("order_id", flat=True)
+            .distinct()
+        )
+        # Другие товары из этих заказов, по частоте (сколько заказов).
+        return (
+            get_catalog_queryset()
+            .filter(order_items__order_id__in=order_ids)
+            .exclude(pk=product.pk)
+            .annotate(
+                bought_freq=Count(
+                    "order_items__order_id",
+                    filter=Q(order_items__order_id__in=order_ids),
+                    distinct=True,
+                ),
+            )
+            .order_by("-bought_freq", "name_short")[: self.BOUGHT_TOGETHER_LIMIT]
         )

@@ -27,6 +27,11 @@ urlpatterns = [
         name="product-similar",
     ),
     path(
+        "products/<int:product_id>/bought-together/",
+        views.BoughtTogetherView.as_view(),
+        name="product-bought-together",
+    ),
+    path(
         "search-history/",
         views_search.SearchHistoryView.as_view(),
         name="search-history",
