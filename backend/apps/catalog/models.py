@@ -565,3 +565,39 @@ class ProductGroup(models.Model):
 
     def __str__(self) -> str:
         return self.name
+
+
+class SearchQuery(models.Model):
+    """
+    Поисковый запрос пользователя — для истории "Вы недавно искали".
+
+    Сохраняется, когда пользователь завершает поиск (не на каждый символ).
+    История персональная (привязана к пользователю). Показываются
+    последние уникальные запросы, свежий сверху.
+    """
+
+    user = models.ForeignKey(
+        "users.User",
+        on_delete=models.CASCADE,
+        related_name="search_queries",
+        verbose_name="Пользователь",
+    )
+    query = models.CharField(
+        max_length=255,
+        verbose_name="Запрос",
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name="Когда искал",
+    )
+
+    class Meta:
+        verbose_name = "Поисковый запрос"
+        verbose_name_plural = "История поиска"
+        ordering: ClassVar[list[str]] = ["-created_at"]
+        indexes: ClassVar[list[models.Index]] = [
+            models.Index(fields=["user", "-created_at"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.user}: {self.query}"

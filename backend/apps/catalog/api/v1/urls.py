@@ -4,7 +4,7 @@ URL маршруты для API каталога (v1).
 
 from django.urls import path
 
-from apps.catalog.api.v1 import views
+from apps.catalog.api.v1 import views, views_search
 
 app_name = "catalog_api_v1"
 
@@ -25,5 +25,15 @@ urlpatterns = [
         "products/<int:product_id>/similar/",
         views.SimilarProductsView.as_view(),
         name="product-similar",
+    ),
+    path(
+        "search-history/",
+        views_search.SearchHistoryView.as_view(),
+        name="search-history",
+    ),
+    path(
+        "search-history/<int:query_id>/",
+        views_search.SearchHistoryItemView.as_view(),
+        name="search-history-item",
     ),
 ]
