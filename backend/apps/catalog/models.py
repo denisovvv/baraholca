@@ -461,3 +461,44 @@ class ProductStock(models.Model):
                     )
                 }
             )
+
+
+class ProductCharacteristic(models.Model):
+    """
+    Характеристика товара — пара "название: значение".
+
+    Вносится вручную в админке (не из 1С). Примеры:
+    "Материал: Хлопок с ПВХ", "Вес: 450 г", "Страна: Россия".
+    Один товар имеет несколько характеристик, порядок задаётся
+    полем order.
+    """
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="characteristics",
+        verbose_name="Товар",
+    )
+    name = models.CharField(
+        max_length=100,
+        verbose_name="Название",
+        help_text="Например: Материал, Вес, Габариты",
+    )
+    value = models.CharField(
+        max_length=255,
+        verbose_name="Значение",
+        help_text="Например: Хлопок с ПВХ, 450 г",
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name="Порядок",
+        help_text="Чем меньше число, тем выше в списке",
+    )
+
+    class Meta:
+        verbose_name = "Характеристика товара"
+        verbose_name_plural = "Характеристики товара"
+        ordering: ClassVar[list[str]] = ["order", "id"]
+
+    def __str__(self) -> str:
+        return f"{self.product.name_short}: {self.name} — {self.value}"

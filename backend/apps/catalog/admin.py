@@ -11,7 +11,14 @@ from django.http import HttpRequest, HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 
 from apps.catalog.forms import ApplyDiscountForm, WorkingHoursFormField
-from apps.catalog.models import Category, Product, ProductImage, ProductStock, Warehouse
+from apps.catalog.models import (
+    Category,
+    Product,
+    ProductCharacteristic,
+    ProductImage,
+    ProductStock,
+    Warehouse,
+)
 
 
 @admin.register(Category)
@@ -143,6 +150,17 @@ class ProductStockInline(admin.TabularInline):
     available_quantity_display.short_description = "Доступно"  # type: ignore[attr-defined]
 
 
+class ProductCharacteristicInline(admin.TabularInline):
+    """
+    Инлайн характеристик товара (название: значение) на странице товара.
+    Заказчик вносит их вручную здесь.
+    """
+
+    model = ProductCharacteristic
+    extra = 1
+    fields = ("name", "value", "order")
+
+
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
     """
@@ -155,7 +173,11 @@ class ProductAdmin(admin.ModelAdmin):
     флаг is_active, время изготовления (для made_to_order).
     """
 
-    inlines: ClassVar[list[type[admin.TabularInline]]] = [ProductImageInline, ProductStockInline]  # type: ignore[assignment]
+    inlines: ClassVar[list[type[admin.TabularInline]]] = [  # type: ignore[assignment]
+        ProductImageInline,
+        ProductStockInline,
+        ProductCharacteristicInline,
+    ]
 
     list_display = (
         "name_short",

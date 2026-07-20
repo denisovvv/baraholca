@@ -11,7 +11,12 @@ from django.contrib.auth import get_user_model
 from django.contrib.gis.geos import Point
 from rest_framework.test import APITestCase
 
-from apps.catalog.models import Category, Product, Warehouse
+from apps.catalog.models import (
+    Category,
+    Product,
+    ProductCharacteristic,
+    Warehouse,
+)
 from apps.reviews.models import Review
 from apps.sellers.models import Seller
 
@@ -119,6 +124,32 @@ class ProductDetailTests(APITestCase):
         response = self.client.get(f"/api/v1/catalog/products/{self.product.id}/")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["name_short"], "Кружка")
+
+    def test_detail_returns_characteristics_in_order(self):
+        """Карточка отдаёт характеристики товара в порядке order."""
+        ProductCharacteristic.objects.create(
+            product=self.product, name="Вес", value="450 г", order=2
+        )
+        ProductCharacteristic.objects.create(
+            product=self.product, name="Материал", value="Керамика", order=1
+        )
+
+        response = self.client.get(f"/api/v1/catalog/products/{self.product.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        chars = response.data["characteristics"]
+        self.assertEqual(len(chars), 2)
+        # Порядок: Материал (order=1) перед Вес (order=2)
+        self.assertEqual(chars[0]["name"], "Материал")
+        self.assertEqual(chars[0]["value"], "Керамика")
+        self.assertEqual(chars[1]["name"], "Вес")
+
+    def test_detail_no_characteristics_empty_list(self):
+        """Товар без характеристик — пустой список."""
+        response = self.client.get(f"/api/v1/catalog/products/{self.product.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["characteristics"], [])
 
     def test_nonexistent_returns_not_found_error(self):
         """Несуществующий товар — 404 в едином контракте {error: {code, message}}."""

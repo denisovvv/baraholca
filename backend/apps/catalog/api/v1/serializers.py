@@ -9,6 +9,7 @@ from rest_framework import serializers
 from apps.catalog.models import (
     Category,
     Product,
+    ProductCharacteristic,
     ProductImage,
     ProductStock,
     Warehouse,
@@ -285,6 +286,17 @@ class ProductListSerializer(serializers.ModelSerializer):
         return round(float(value), 1)
 
 
+class ProductCharacteristicSerializer(serializers.ModelSerializer):
+    """Характеристика товара (название: значение) для карточки."""
+
+    class Meta:
+        model = ProductCharacteristic
+        fields: ClassVar[list[str]] = [
+            "name",
+            "value",
+        ]
+
+
 class ProductDetailSerializer(ProductListSerializer):
     """
     Полное представление товара для карточки.
@@ -292,6 +304,7 @@ class ProductDetailSerializer(ProductListSerializer):
 
     images = ProductImageSerializer(many=True, read_only=True)
     stocks = ProductStockSerializer(many=True, read_only=True)
+    characteristics = ProductCharacteristicSerializer(many=True, read_only=True)
 
     class Meta(ProductListSerializer.Meta):
         fields: ClassVar[list[str]] = [
@@ -301,4 +314,5 @@ class ProductDetailSerializer(ProductListSerializer):
             "production_time_days",
             "images",
             "stocks",
+            "characteristics",
         ]
