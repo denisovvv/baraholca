@@ -313,3 +313,113 @@ class ProductRatingTests(APITestCase):
 
         self.assertIsNone(data["rating_avg"])
         self.assertEqual(data["reviews_count"], 0)
+
+
+class SellerProductsTests(APITestCase):
+    """Тесты endpoint "Ещё у этого продавца"."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Иванов",
+            short_name="Иванов",
+            inn="123456789012",
+            ogrnip="123456789012345",
+            order_prefix="SPA",
+        )
+        self.other_seller = Seller.objects.create(
+            name="ИП Петров",
+            short_name="Петров",
+            inn="210987654321",
+            ogrnip="543210987654321",
+            order_prefix="SPB",
+        )
+        self.category = Category.objects.create(name="Инструменты")
+
+        # Текущий товar (для него ищем рекомендации)
+        self.current = Product.objects.create(
+            name_short="Дрель",
+            name_full="Дрель ударная",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("3000.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Другие товары того же продавца
+        self.same_1 = Product.objects.create(
+            name_short="Шуруповёрт",
+            name_full="Шуруповёрт аккумуляторный",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("4000.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.same_2 = Product.objects.create(
+            name_short="Молоток",
+            name_full="Молоток слесарный",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Товар другого продавца — не должен попадать
+        self.foreign = Product.objects.create(
+            name_short="Пила",
+            name_full="Пила чужого продавца",
+            seller=self.other_seller,
+            category=self.category,
+            base_price=Decimal("2000.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Неактивный товар того же продавца — не должен попадать
+        self.hidden = Product.objects.create(
+            name_short="Ножовка",
+            name_full="Ножовка скрытая",
+            seller=self.seller,
+            category=self.category,
+            base_price=Decimal("800.00"),
+            product_type="stock",
+            is_active=False,
+            is_available_for_sale=True,
+        )
+
+    def _url(self, product_id):
+        return f"/api/v1/catalog/products/{product_id}/seller-products/"
+
+    def test_returns_other_products_of_same_seller(self):
+        """Отдаёт другие товары того же продавца."""
+        response = self.client.get(self._url(self.current.id))
+        self.assertEqual(response.status_code, 200)
+        names = {item["name_short"] for item in response.data}
+        self.assertIn("Шуруповёрт", names)
+        self.assertIn("Молоток", names)
+
+    def test_excludes_current_product(self):
+        """Текущий товар не показывается в своих рекомендациях."""
+        response = self.client.get(self._url(self.current.id))
+        names = {item["name_short"] for item in response.data}
+        self.assertNotIn("Дрель", names)
+
+    def test_excludes_other_sellers(self):
+        """Товары других продавцов не показываются."""
+        response = self.client.get(self._url(self.current.id))
+        names = {item["name_short"] for item in response.data}
+        self.assertNotIn("Пила", names)
+
+    def test_excludes_inactive_products(self):
+        """Неактивные товары не показываются."""
+        response = self.client.get(self._url(self.current.id))
+        names = {item["name_short"] for item in response.data}
+        self.assertNotIn("Ножовка", names)
+
+    def test_404_for_missing_product(self):
+        """Несуществующий товар — 404."""
+        response = self.client.get(self._url(999999))
+        self.assertEqual(response.status_code, 404)

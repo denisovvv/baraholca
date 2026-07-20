@@ -7,6 +7,7 @@ from typing import ClassVar
 from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point
 from django.db.models import Avg, Case, Count, DecimalField, F, Q, QuerySet, When
+from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework.permissions import AllowAny, BasePermission
 
@@ -93,6 +94,45 @@ class ProductDetailView(generics.RetrieveAPIView):
         )
 
 
+def get_catalog_queryset() -> QuerySet[Product]:
+    """
+    Базовый queryset товаров каталога с аннотациями.
+
+    Одна точка правды для всех вьюх каталога (список, рекомендации):
+    фильтр видимости (активные + доступные), эффективная цена
+    (скидочная или базовая), агрегированный рейтинг и число
+    опубликованных отзывов.
+    """
+    return (
+        Product.objects.filter(
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        .select_related(
+            "seller",
+            "category",
+        )
+        .prefetch_related(
+            "images",
+        )
+        .annotate(
+            effective_price_anno=Case(
+                When(discount_price__isnull=False, then=F("discount_price")),
+                default=F("base_price"),
+                output_field=DecimalField(max_digits=12, decimal_places=2),
+            ),
+            rating_avg=Avg(
+                "reviews__rating",
+                filter=Q(reviews__is_published=True),
+            ),
+            reviews_count=Count(
+                "reviews",
+                filter=Q(reviews__is_published=True),
+            ),
+        )
+    )
+
+
 class ProductListView(generics.ListAPIView):
     """
     Список товаров с фильтрацией, поиском и пагинацией.
@@ -106,37 +146,8 @@ class ProductListView(generics.ListAPIView):
     ordering: ClassVar[list[str]] = ["name_short"]  # сортировка по умолчанию
 
     def get_queryset(self) -> QuerySet[Product]:
-        """
-        Товары, видимые в каталоге, с аннотацией эффективной цены.
-        """
-        return (
-            Product.objects.filter(
-                is_active=True,
-                is_available_for_sale=True,
-            )
-            .select_related(
-                "seller",
-                "category",
-            )
-            .prefetch_related(
-                "images",
-            )
-            .annotate(
-                effective_price_anno=Case(
-                    When(discount_price__isnull=False, then=F("discount_price")),
-                    default=F("base_price"),
-                    output_field=DecimalField(max_digits=12, decimal_places=2),
-                ),
-                rating_avg=Avg(
-                    "reviews__rating",
-                    filter=Q(reviews__is_published=True),
-                ),
-                reviews_count=Count(
-                    "reviews",
-                    filter=Q(reviews__is_published=True),
-                ),
-            )
-        )
+        """Товары, видимые в каталоге, с аннотациями цены и рейтинга."""
+        return get_catalog_queryset()
 
 
 class WarehouseNearbyView(generics.ListAPIView):
@@ -202,3 +213,40 @@ class CategoryTreeView(generics.ListAPIView):
             is_active=True,
             parent__isnull=True,
         ).order_by("order", "name")
+
+
+class SellerProductsView(generics.ListAPIView):
+    """
+    Другие товары того же продавца — блок "Ещё у этого продавца"
+    на карточке товара.
+
+    Берёт продавца у товара из URL и отдаёт другие его активные
+    товары, исключая текущий. Лимит задаётся пагинацией/срезом —
+    это рекомендательный блок, не полный каталог продавца.
+    """
+
+    serializer_class = ProductListSerializer
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
+    pagination_class = None
+
+    # Сколько товаров показывать в блоке рекомендаций.
+    RECOMMENDATIONS_LIMIT = 10
+
+    def get_queryset(self) -> QuerySet[Product]:
+        """
+        Товары того же продавца, что и товар из URL, кроме него самого.
+
+        Если товар не найден — 404 (через get_object_or_404).
+        Переиспользуем общий queryset каталога, чтобы карточки
+        рекомендаций имели те же данные (цена, рейтинг), что и в списке.
+        """
+        product = get_object_or_404(Product, pk=self.kwargs["product_id"])
+        return (
+            get_catalog_queryset()
+            .filter(
+                seller_id=product.seller_id,
+            )
+            .exclude(
+                pk=product.pk,
+            )[: self.RECOMMENDATIONS_LIMIT]
+        )
