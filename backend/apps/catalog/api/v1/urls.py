@@ -20,4 +20,9 @@ urlpatterns = [
         views.SellerProductsView.as_view(),
         name="product-seller-products",
     ),
+    path(
+        "products/<int:product_id>/similar/",
+        views.SimilarProductsView.as_view(),
+        name="product-similar",
+    ),
 ]

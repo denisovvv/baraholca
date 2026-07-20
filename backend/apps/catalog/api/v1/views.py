@@ -250,3 +250,40 @@ class SellerProductsView(generics.ListAPIView):
                 pk=product.pk,
             )[: self.RECOMMENDATIONS_LIMIT]
         )
+
+
+class SimilarProductsView(generics.ListAPIView):
+    """
+    Похожие товары — блок "Похожие товары" на карточке товара.
+
+    Берёт категорию у товара из URL и отдаёт другие товары той же
+    категории, исключая текущий. Если у товара нет категории —
+    пустой список (похожих по категории нет).
+    """
+
+    serializer_class = ProductListSerializer
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
+    pagination_class = None
+
+    # Сколько товаров показывать в блоке рекомендаций.
+    RECOMMENDATIONS_LIMIT = 10
+
+    def get_queryset(self) -> QuerySet[Product]:
+        """
+        Товары той же категории, что и товар из URL, кроме него самого.
+
+        Если товар не найден — 404. Если у товара нет категории —
+        пустой queryset. Переиспользуем общий queryset каталога.
+        """
+        product = get_object_or_404(Product, pk=self.kwargs["product_id"])
+        if product.category_id is None:
+            return get_catalog_queryset().none()
+        return (
+            get_catalog_queryset()
+            .filter(
+                category_id=product.category_id,
+            )
+            .exclude(
+                pk=product.pk,
+            )[: self.RECOMMENDATIONS_LIMIT]
+        )
