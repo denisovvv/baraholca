@@ -654,3 +654,108 @@ class ProductVariantsTests(APITestCase):
         response = self._detail(self.standalone.id)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["variants"], [])
+
+
+class ProductSuggestTests(APITestCase):
+    """Тесты автодополнения поиска (подсказки)."""
+
+    def setUp(self):
+        self.seller = Seller.objects.create(
+            name="ИП Иванов",
+            short_name="Иванов",
+            inn="123456789012",
+            ogrnip="123456789012345",
+            order_prefix="SUG",
+        )
+        # Товары с "чехол" в названии
+        self.case1 = Product.objects.create(
+            name_short="Чехол iPhone 15",
+            name_full="Чехол для iPhone 15 силиконовый",
+            seller=self.seller,
+            base_price=Decimal("500.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        self.case2 = Product.objects.create(
+            name_short="Чехол ноутбука",
+            name_full="Чехол для ноутбука 15 дюймов",
+            seller=self.seller,
+            base_price=Decimal("800.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Совпадение только в полном названии
+        self.full_only = Product.objects.create(
+            name_short="Аксессуар А1",
+            name_full="Универсальный чехол-книжка",
+            seller=self.seller,
+            base_price=Decimal("300.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Не совпадает
+        self.other = Product.objects.create(
+            name_short="Кружка",
+            name_full="Кружка керамическая",
+            seller=self.seller,
+            base_price=Decimal("400.00"),
+            product_type="stock",
+            is_active=True,
+            is_available_for_sale=True,
+        )
+        # Неактивный с "чехол"
+        self.hidden = Product.objects.create(
+            name_short="Чехол скрытый",
+            name_full="Чехол неактивный",
+            seller=self.seller,
+            base_price=Decimal("100.00"),
+            product_type="stock",
+            is_active=False,
+            is_available_for_sale=True,
+        )
+        self.url = "/api/v1/catalog/products/suggest/"
+
+    def test_suggest_by_name_short(self):
+        """Находит товары по краткому названию."""
+        response = self.client.get(self.url, {"q": "чехол"})
+        self.assertEqual(response.status_code, 200)
+        names = {item["name_short"] for item in response.data}
+        self.assertIn("Чехол iPhone 15", names)
+        self.assertIn("Чехол ноутбука", names)
+
+    def test_suggest_by_name_full(self):
+        """Находит по полному названию (совпадение только там)."""
+        response = self.client.get(self.url, {"q": "книжка"})
+        names = {item["name_short"] for item in response.data}
+        self.assertIn("Аксессуар А1", names)
+
+    def test_suggest_case_insensitive(self):
+        """Регистронезависимый поиск."""
+        response = self.client.get(self.url, {"q": "ЧЕХОЛ"})
+        self.assertGreaterEqual(len(response.data), 2)
+
+    def test_suggest_excludes_inactive(self):
+        """Неактивные товары не в подсказках."""
+        response = self.client.get(self.url, {"q": "чехол"})
+        names = {item["name_short"] for item in response.data}
+        self.assertNotIn("Чехол скрытый", names)
+
+    def test_suggest_empty_query_empty_result(self):
+        """Пустой запрос — пустой список."""
+        response = self.client.get(self.url, {"q": ""})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.data), 0)
+
+    def test_suggest_no_query_param_empty(self):
+        """Без параметра q — пустой список."""
+        response = self.client.get(self.url)
+        self.assertEqual(len(response.data), 0)
+
+    def test_suggest_returns_only_id_and_name(self):
+        """Подсказка содержит только id и name_short."""
+        response = self.client.get(self.url, {"q": "чехол"})
+        item = response.data[0]
+        self.assertEqual(set(item.keys()), {"id", "name_short"})

@@ -17,6 +17,7 @@ from apps.catalog.api.v1.serializers import (
     CategoryTreeSerializer,
     ProductDetailSerializer,
     ProductListSerializer,
+    ProductSuggestSerializer,
     WarehouseListSerializer,
     WarehouseNearbySerializer,
 )
@@ -286,4 +287,45 @@ class SimilarProductsView(generics.ListAPIView):
             .exclude(
                 pk=product.pk,
             )[: self.RECOMMENDATIONS_LIMIT]
+        )
+
+
+class ProductSuggestView(generics.ListAPIView):
+    """
+    Автодополнение поиска — подсказки по вводу.
+
+    GET /api/v1/catalog/products/suggest/?q=чех
+    Возвращает до 8 активных товаров, в названии которых (кратком или
+    полном) встречается запрос. Пустой или короткий запрос — пустой
+    список. Ответ компактный (id + name_short).
+    """
+
+    serializer_class = ProductSuggestSerializer
+    permission_classes: ClassVar[list[type[BasePermission]]] = [AllowAny]  # type: ignore[misc]
+    pagination_class = None
+
+    # Максимум подсказок в выдаче.
+    SUGGEST_LIMIT = 8
+    # Минимальная длина запроса, чтобы искать (1 символ — уже ищем).
+    MIN_QUERY_LENGTH = 1
+
+    def get_queryset(self) -> QuerySet[Product]:
+        """
+        Активные товары, чьё название содержит запрос (icontains).
+
+        Поиск по name_short и name_full (как основной search).
+        Пустой/слишком короткий запрос — пустой queryset.
+        """
+        query = self.request.query_params.get("q", "").strip()
+        if len(query) < self.MIN_QUERY_LENGTH:
+            return Product.objects.none()
+        return (
+            Product.objects.filter(
+                is_active=True,
+                is_available_for_sale=True,
+            )
+            .filter(
+                Q(name_short__icontains=query) | Q(name_full__icontains=query),
+            )
+            .order_by("name_short")[: self.SUGGEST_LIMIT]
         )

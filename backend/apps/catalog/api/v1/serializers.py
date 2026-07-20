@@ -217,6 +217,20 @@ class ProductStockSerializer(serializers.ModelSerializer):
 # ============================================================================
 
 
+class ProductSuggestSerializer(serializers.ModelSerializer):
+    """
+    Компактная подсказка автодополнения поиска: id + краткое название.
+    Отдаётся списком при вводе запроса в поиск.
+    """
+
+    class Meta:
+        model = Product
+        fields: ClassVar[list[str]] = [
+            "id",
+            "name_short",
+        ]
+
+
 class ProductListSerializer(serializers.ModelSerializer):
     """
     Короткое представление товара для списков и каталога.

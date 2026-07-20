@@ -14,6 +14,7 @@ urlpatterns = [
     path("warehouses/nearby/", views.WarehouseNearbyView.as_view(), name="warehouse-nearby"),
     path("warehouses/", views.WarehouseListView.as_view(), name="warehouse-list"),
     path("products/", views.ProductListView.as_view(), name="product-list"),
+    path("products/suggest/", views.ProductSuggestView.as_view(), name="product-suggest"),
     path("products/<int:id>/", views.ProductDetailView.as_view(), name="product-detail"),
     path(
         "products/<int:product_id>/seller-products/",
