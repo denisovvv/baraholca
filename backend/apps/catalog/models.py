@@ -243,6 +243,30 @@ class Product(models.Model):
         verbose_name="Категория",
     )
 
+    # Группа вариантов (витринная карточка-родитель).
+    # null — товар без вариантов.
+    group = models.ForeignKey(
+        "ProductGroup",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="variants",
+        verbose_name="Группа вариантов",
+        help_text="Объединяет варианты в одну карточку. Пусто — без вариантов.",
+    )
+    # Атрибуты варианта — вручную (в 1С цвет/размер только в названии).
+    variant_color = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Цвет (вариант)",
+        help_text="Например: Жёлтый.",
+    )
+    variant_size = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name="Размер (вариант)",
+        help_text="Например: M.",
+    )
     # Тип товара
     product_type = models.CharField(
         max_length=20, choices=TYPE_CHOICES, default=TYPE_STOCK, verbose_name="Тип товара"
@@ -502,3 +526,42 @@ class ProductCharacteristic(models.Model):
 
     def __str__(self) -> str:
         return f"{self.product.name_short}: {self.name} — {self.value}"
+
+
+class ProductGroup(models.Model):
+    """
+    Группа вариантов товара — витринная карточка-родитель.
+
+    Объединяет несколько товаров-вариантов (Product), каждый из которых
+    приходит из 1С отдельной номенклатурой со своим кодом, ценой и
+    остатком. Пример: "Чехол iPhone 11 Pro Max" объединяет жёлтый
+    (код 00-00005094) и голубой (00-00005096).
+
+    Создаётся вручную в админке: в 1С варианты не связаны между собой
+    (цвет указан только в названии), поэтому группировку задаём на
+    нашей стороне.
+    """
+
+    name = models.CharField(
+        max_length=255,
+        verbose_name="Название группы",
+        help_text="Общее название витрины, например: Чехол iPhone 11 Pro Max",
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name="Описание группы",
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name="Активна",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Создана")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Обновлена")
+
+    class Meta:
+        verbose_name = "Группа вариантов"
+        verbose_name_plural = "Группы вариантов"
+        ordering: ClassVar[list[str]] = ["name"]
+
+    def __str__(self) -> str:
+        return self.name
