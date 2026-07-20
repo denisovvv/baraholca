@@ -144,6 +144,21 @@ class CheckoutEndpointTestCase(APITestCase):
         self.assertIn("warehouse", order_data)
         self.assertEqual(order_data["warehouse"]["name"], "Тестовый склад")
 
+    def test_sbp_payment_method(self) -> None:
+        """Checkout принимает оплату по СБП, заказ сохраняется с sbp."""
+        self._setup_cart(quantity=1)
+        self._setup_stock(quantity=10)
+        self._auth()
+        payload = self._courier_payload()
+        payload["payment_method"] = "sbp"
+
+        response = self.client.post(self.checkout_url, payload, format="json")
+
+        self.assertEqual(response.status_code, 201)
+        order_data = response.data[0]
+        self.assertEqual(order_data["payment_method"], "sbp")
+        self.assertEqual(order_data["payment_method_display"], "СБП")
+
     def test_pickup_happy_path(self) -> None:
         """Pickup: 201 с одним заказом на выбранный склад."""
         self._setup_cart(quantity=1)

@@ -68,6 +68,7 @@ class PaymentMethod(models.TextChoices):
     """Способ оплаты."""
 
     CARD_ONLINE = "card_online", "Картой онлайн"
+    SBP = "sbp", "СБП"
     CASH_ON_DELIVERY = "cash_on_delivery", "Наличными при получении"
 
 
