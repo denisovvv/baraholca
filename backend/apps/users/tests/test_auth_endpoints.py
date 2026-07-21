@@ -9,14 +9,20 @@
 """
 
 from django.core.cache import cache
+from django.test import override_settings
 from rest_framework.test import APIClient, APITestCase
 
 from apps.users.api.v1.utils import get_sms_code
 from apps.users.models import User
 
 
+@override_settings(SMS_PROVIDER="console")
 class SmsRequestEndpointTests(APITestCase):
-    """Тесты endpoint запроса SMS-кода."""
+    """Тесты endpoint запроса SMS-кода.
+
+    SMS_PROVIDER фиксируется на console — тесты не зависят от .env
+    и не отправляют реальные SMS через внешний провайдер.
+    """
 
     def setUp(self):
         cache.clear()

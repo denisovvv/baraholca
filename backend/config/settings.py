@@ -225,7 +225,15 @@ CACHES = {
 # Тип SMS-провайдера для отправки кодов подтверждения.
 # Допустимые значения: 'console' (для разработки).
 # В будущем: 'sms_aero', 'zvonok' (когда заказчик выберет провайдера).
-SMS_PROVIDER = "console"
+SMS_PROVIDER = os.getenv("SMS_PROVIDER", "console")
+
+# SMS Aero (реальный провайдер). Секреты — в .env, НЕ в git.
+SMSAERO_EMAIL = os.getenv("SMSAERO_EMAIL", "")
+SMSAERO_API_KEY = os.getenv("SMSAERO_API_KEY", "")
+SMSAERO_SIGN = os.getenv("SMSAERO_SIGN", "SMS Aero")
+# Тестовый режим: True — endpoint testsend (SMS не уходит, деньги не
+# списываются), False — реальная отправка. Читаем из env как строку.
+SMSAERO_TEST_MODE = os.getenv("SMSAERO_TEST_MODE", "True") == "True"
 
 # ============================================================================
 # API documentation (drf-spectacular)

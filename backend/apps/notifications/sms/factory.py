@@ -11,10 +11,11 @@ from django.core.exceptions import ImproperlyConfigured
 
 from apps.notifications.sms.base import SmsProvider
 from apps.notifications.sms.console import ConsoleSmsProvider
+from apps.notifications.sms.smsaero import SmsAeroProvider
 
 PROVIDERS = {
     "console": ConsoleSmsProvider,
-    # 'sms_aero': SmsAeroProvider,  # будет добавлено, когда заказчик выберет
+    "sms_aero": SmsAeroProvider,
     # 'zvonok': ZvonokProvider,
 }
 
