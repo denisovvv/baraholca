@@ -40,3 +40,6 @@ mobile/.flutter-plugins-dependencies
 # Logs
 *.log
 CLAUDE.md
+
+# Артефакты сборки в корне (Flutter/Xcode)
+/build/
