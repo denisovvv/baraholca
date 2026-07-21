@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../auth/phone_login_screen.dart';
 
 /// Данные одного слайда онбординга.
 class _OnboardingSlide {
@@ -60,8 +61,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   bool get _isLastPage => _currentPage == _slides.length - 1;
 
+  void _goToLogin() {
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (context) => const PhoneLoginScreen(),
+      ),
+    );
+  }
+
   void _onNext() {
     if (_isLastPage) {
+      _goToLogin();
       return;
     }
     _pageController.nextPage(
@@ -70,7 +80,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  void _onSkip() {}
+  void _onSkip() {
+    _goToLogin();
+  }
 
   @override
   Widget build(BuildContext context) {
