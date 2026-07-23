@@ -6,7 +6,7 @@ import 'package:dio/dio.dart';
 /// Пока backend работает локально (runserver), позже сменим
 /// baseUrl на боевой домен baraxolkamarket.online.
 class ApiClient {
-  ApiClient() {
+  ApiClient({List<Interceptor> interceptors = const []}) {
     _dio = Dio(
       BaseOptions(
         // Локальный backend. На симуляторе iOS localhost = Mac.
@@ -18,6 +18,7 @@ class ApiClient {
         validateStatus: (status) => status != null && status < 500,
       ),
     );
+    _dio.interceptors.addAll(interceptors);
   }
 
   late final Dio _dio;

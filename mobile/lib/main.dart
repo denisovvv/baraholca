@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/theme/app_theme.dart';
-import 'features/onboarding/onboarding_screen.dart';
+import 'features/auth/session_gate.dart';
 
 void main() {
   runApp(const ProviderScope(child: BaraxolkaApp()));
@@ -18,7 +18,7 @@ class BaraxolkaApp extends StatelessWidget {
       title: 'Барахолка',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark,
-      home: const OnboardingScreen(),
+      home: const SessionGate(),
     );
   }
 }

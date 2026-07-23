@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import 'auth_providers.dart';
 import 'auth_service.dart';
+import 'session_gate.dart';
 
 /// Экран ввода SMS-кода («Код из SMS — 1c» из дизайна).
 ///
@@ -87,15 +88,25 @@ class _SmsCodeScreenState extends ConsumerState<SmsCodeScreen> {
 
     try {
       final result = await authService.verifyCode(widget.phone, _code);
+      // Сохраняем токены в защищённое хранилище до действий с UI:
+      // после этого сессия переживёт перезапуск приложения.
+      await ref.read(tokenStorageProvider).saveTokens(
+            access: result.access,
+            refresh: result.refresh,
+          );
       if (!mounted) return;
-      // Успех — получили токены.
-      // TODO: сохранить токены, перейти в каталог (следующий этап).
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             result.isNewUser ? 'Добро пожаловать!' : 'С возвращением!',
           ),
         ),
+      );
+      // Вход завершён: убираем экраны авторизации из стека,
+      // чтобы кнопка "назад" не возвращала к вводу кода.
+      await Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(builder: (context) => const TempHomeScreen()),
+        (route) => false,
       );
     } on AuthException catch (e) {
       if (!mounted) return;
