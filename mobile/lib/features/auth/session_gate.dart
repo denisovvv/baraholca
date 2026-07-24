@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../catalog/catalog_screen.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'auth_providers.dart';
 
@@ -37,7 +38,7 @@ class _SessionGateState extends ConsumerState<SessionGate> {
           );
         }
         final hasSession = snapshot.data ?? false;
-        return hasSession ? const TempHomeScreen() : const OnboardingScreen();
+        return hasSession ? const CatalogScreen() : const OnboardingScreen();
       },
     );
   }

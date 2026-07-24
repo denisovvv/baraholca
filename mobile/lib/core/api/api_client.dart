@@ -10,7 +10,7 @@ class ApiClient {
     _dio = Dio(
       BaseOptions(
         // Локальный backend. На симуляторе iOS localhost = Mac.
-        baseUrl: 'http://127.0.0.1:8000/api/v1',
+        baseUrl: baseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
         // Ответы с кодами 4xx не будут кидать исключение сразу —
@@ -20,6 +20,9 @@ class ApiClient {
     );
     _dio.interceptors.addAll(interceptors);
   }
+
+  /// Адрес backend. Локальный runserver; на проде сменим на домен.
+  static const String baseUrl = 'http://127.0.0.1:8000/api/v1';
 
   late final Dio _dio;
 

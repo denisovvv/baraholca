@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_colors.dart';
 import 'auth_providers.dart';
 import 'auth_service.dart';
-import 'session_gate.dart';
+import '../catalog/catalog_screen.dart';
 
 /// Экран ввода SMS-кода («Код из SMS — 1c» из дизайна).
 ///
@@ -105,7 +105,7 @@ class _SmsCodeScreenState extends ConsumerState<SmsCodeScreen> {
       // Вход завершён: убираем экраны авторизации из стека,
       // чтобы кнопка "назад" не возвращала к вводу кода.
       await Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute<void>(builder: (context) => const TempHomeScreen()),
+        MaterialPageRoute<void>(builder: (context) => const CatalogScreen()),
         (route) => false,
       );
     } on AuthException catch (e) {

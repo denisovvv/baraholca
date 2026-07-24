@@ -8,16 +8,22 @@ import 'auth_service.dart';
 import 'token_storage.dart';
 
 /// Провайдер HTTP-клиента (один на приложение).
-final apiClientProvider = Provider<ApiClient>((ref) {
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
   final tokenStorage = ref.watch(tokenStorageProvider);
-  return ApiClient(interceptors: [AuthInterceptor(tokenStorage)]);
+  return ApiClient(
+    interceptors: [
+      // Сервис достаём лениво: он сам зависит от этого же клиента,
+      // прямая ссылка замкнула бы провайдеры друг на друга.
+      AuthInterceptor(tokenStorage, ApiClient.baseUrl),
+    ],
+  );
 });
 
 /// Провайдер сервиса авторизации.
 ///
 /// Берёт ApiClient из провайдера выше — так зависимости
 /// связываются через Riverpod, а не создаются вручную.
-final authServiceProvider = Provider<AuthService>((ref) {
+final Provider<AuthService> authServiceProvider = Provider<AuthService>((ref) {
   final apiClient = ref.watch(apiClientProvider);
   return AuthService(apiClient);
 });
